@@ -32,8 +32,15 @@ export function BottomNav() {
                 }
               `}
             >
-              <Icon className="h-5 w-5 mb-1" />
-              <span className="text-xs font-medium">{label}</span>
+              <div className={`
+                p-1.5 rounded-lg transition-all
+                ${isActive ? 'bg-accent/10' : ''}
+              `}>
+                <Icon className="h-5 w-5" />
+              </div>
+              <span className={`text-xs mt-0.5 ${isActive ? 'font-semibold' : 'font-medium'}`}>
+                {label}
+              </span>
             </Link>
           );
         })}
