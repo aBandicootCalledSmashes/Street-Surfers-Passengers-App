@@ -7,8 +7,9 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Loader2, AlertCircle, Bus, Shield, MapPin } from 'lucide-react';
+import { Loader2, AlertCircle, Shield, MapPin } from 'lucide-react';
 import { z } from 'zod';
+import logo from '@/assets/logo.webp';
 
 const emailSchema = z.string().email('Please enter a valid email');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -100,18 +101,22 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col dark">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Hero Section */}
-      <div className="px-6 pt-16 pb-8 text-center">
+      <div className="px-6 pt-12 pb-6 text-center">
         {/* Logo */}
-        <div className="w-20 h-20 rounded-2xl bg-accent flex items-center justify-center mx-auto mb-6 glow-accent">
-          <Bus className="w-10 h-10 text-accent-foreground" />
+        <div className="mb-6">
+          <img 
+            src={logo} 
+            alt="Street Surfers - South Side Shuttles" 
+            className="h-24 w-auto mx-auto"
+          />
         </div>
         
-        <h1 className="text-4xl font-display font-bold text-foreground mb-2">
-          Street Surfers
+        <h1 className="text-3xl font-display font-bold text-foreground mb-1">
+          Welcome Back
         </h1>
-        <p className="text-muted-foreground text-lg">Passenger App</p>
+        <p className="text-muted-foreground">Sign in to track your rides</p>
 
         {/* Feature Pills */}
         <div className="flex flex-wrap justify-center gap-3 mt-6">
@@ -129,9 +134,9 @@ export default function Auth() {
       {/* Auth Card */}
       <div className="flex-1 px-5 pb-8">
         {noPassengerRecord && (
-          <Alert variant="destructive" className="mb-4 rounded-xl">
+          <Alert variant="destructive" className="mb-4 rounded-xl border-accent/50 bg-accent/10">
             <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
+            <AlertDescription className="text-foreground">
               No passenger record found. Please contact your administrator.
             </AlertDescription>
           </Alert>
@@ -140,25 +145,25 @@ export default function Auth() {
         <Card className="bg-card border-border rounded-2xl overflow-hidden">
           <CardContent className="p-0">
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 p-1 m-4 mb-0 bg-muted rounded-xl" style={{ width: 'calc(100% - 32px)' }}>
+              <TabsList className="grid w-full grid-cols-2 p-1 m-4 mb-0 bg-secondary rounded-xl" style={{ width: 'calc(100% - 32px)' }}>
                 <TabsTrigger 
                   value="login" 
-                  className="rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground"
+                  className="rounded-lg text-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
                 >
                   Sign In
                 </TabsTrigger>
                 <TabsTrigger 
                   value="signup"
-                  className="rounded-lg data-[state=active]:bg-background data-[state=active]:text-foreground"
+                  className="rounded-lg text-foreground data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
                 >
                   Sign Up
                 </TabsTrigger>
               </TabsList>
 
               {error && (
-                <Alert variant="destructive" className="mx-4 mt-4 rounded-xl">
+                <Alert variant="destructive" className="mx-4 mt-4 rounded-xl border-accent/50 bg-accent/10">
                   <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertDescription className="text-foreground">{error}</AlertDescription>
                 </Alert>
               )}
 
@@ -174,7 +179,7 @@ export default function Auth() {
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       disabled={isLoading}
-                      className="h-12 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                      className="h-12 rounded-xl bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
                     />
                   </div>
                   <div className="space-y-2">
@@ -186,12 +191,12 @@ export default function Auth() {
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       disabled={isLoading}
-                      className="h-12 rounded-xl bg-muted border-border text-foreground"
+                      className="h-12 rounded-xl bg-secondary border-border text-foreground focus:border-accent focus:ring-accent"
                     />
                   </div>
                   <Button 
                     type="submit" 
-                    className="w-full h-12 rounded-xl bg-accent hover:bg-accent/90 text-accent-foreground font-semibold text-base"
+                    className="w-full h-12 rounded-xl gradient-accent hover:opacity-90 text-accent-foreground font-semibold text-base glow-accent"
                     disabled={isLoading}
                   >
                     {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}
@@ -205,7 +210,7 @@ export default function Auth() {
                 <form onSubmit={handleSignup} className="space-y-4">
                   {/* Personal Info Section */}
                   <div className="space-y-4">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Personal Information</p>
+                    <p className="text-xs text-accent uppercase tracking-wider font-semibold">Personal Information</p>
                     
                     <div className="space-y-2">
                       <Label htmlFor="signup-name" className="text-foreground">
@@ -217,7 +222,7 @@ export default function Auth() {
                         value={signupFullName}
                         onChange={(e) => setSignupFullName(e.target.value)}
                         disabled={isLoading}
-                        className="h-12 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                        className="h-12 rounded-xl bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
                       />
                     </div>
 
@@ -232,7 +237,7 @@ export default function Auth() {
                         value={signupEmail}
                         onChange={(e) => setSignupEmail(e.target.value)}
                         disabled={isLoading}
-                        className="h-12 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                        className="h-12 rounded-xl bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
                       />
                     </div>
 
@@ -245,14 +250,14 @@ export default function Auth() {
                         value={signupPhone}
                         onChange={(e) => setSignupPhone(e.target.value)}
                         disabled={isLoading}
-                        className="h-12 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                        className="h-12 rounded-xl bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
                       />
                     </div>
                   </div>
 
                   {/* Work Info Section */}
                   <div className="space-y-4 pt-2">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Work Information</p>
+                    <p className="text-xs text-accent uppercase tracking-wider font-semibold">Work Information</p>
                     
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-2">
@@ -263,7 +268,7 @@ export default function Auth() {
                           value={signupEmployeeId}
                           onChange={(e) => setSignupEmployeeId(e.target.value)}
                           disabled={isLoading}
-                          className="h-12 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                          className="h-12 rounded-xl bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
                         />
                       </div>
                       <div className="space-y-2">
@@ -274,7 +279,7 @@ export default function Auth() {
                           value={signupDepartment}
                           onChange={(e) => setSignupDepartment(e.target.value)}
                           disabled={isLoading}
-                          className="h-12 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                          className="h-12 rounded-xl bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
                         />
                       </div>
                     </div>
@@ -287,14 +292,14 @@ export default function Auth() {
                         value={signupHomeAddress}
                         onChange={(e) => setSignupHomeAddress(e.target.value)}
                         disabled={isLoading}
-                        className="h-12 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                        className="h-12 rounded-xl bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
                       />
                     </div>
                   </div>
 
                   {/* Security Section */}
                   <div className="space-y-4 pt-2">
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Security</p>
+                    <p className="text-xs text-accent uppercase tracking-wider font-semibold">Security</p>
                     
                     <div className="space-y-2">
                       <Label htmlFor="signup-password" className="text-foreground">
@@ -307,7 +312,7 @@ export default function Auth() {
                         value={signupPassword}
                         onChange={(e) => setSignupPassword(e.target.value)}
                         disabled={isLoading}
-                        className="h-12 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                        className="h-12 rounded-xl bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
                       />
                     </div>
 
@@ -322,14 +327,14 @@ export default function Auth() {
                         value={signupConfirmPassword}
                         onChange={(e) => setSignupConfirmPassword(e.target.value)}
                         disabled={isLoading}
-                        className="h-12 rounded-xl bg-muted border-border text-foreground placeholder:text-muted-foreground"
+                        className="h-12 rounded-xl bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
                       />
                     </div>
                   </div>
 
                   <Button 
                     type="submit" 
-                    className="w-full h-12 rounded-xl bg-accent hover:bg-accent/90 text-accent-foreground font-semibold text-base mt-2"
+                    className="w-full h-12 rounded-xl gradient-accent hover:opacity-90 text-accent-foreground font-semibold text-base mt-2 glow-accent"
                     disabled={isLoading}
                   >
                     {isLoading ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : null}

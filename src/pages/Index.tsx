@@ -6,10 +6,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MapPin, Calendar, Clock } from 'lucide-react';
 import { format, isToday, isTomorrow, parseISO } from 'date-fns';
+import logo from '@/assets/logo.webp';
 
 export default function Index() {
   const { profile } = useAuth();
-  const { getUpcomingTrips, getTodaysTrips, loading } = useTrips();
+  const { getUpcomingTrips, loading } = useTrips();
   const upcomingTrips = getUpcomingTrips();
   const isLoading = loading;
 
@@ -38,9 +39,12 @@ export default function Index() {
 
   return (
     <AppLayout>
-      <div className="min-h-screen bg-background dark">
-        {/* Header */}
+      <div className="min-h-screen bg-background">
+        {/* Header with Logo */}
         <div className="safe-top px-5 pt-6 pb-4">
+          <div className="flex items-center justify-between mb-4">
+            <img src={logo} alt="Street Surfers" className="h-10 w-auto" />
+          </div>
           <p className="text-muted-foreground text-sm">{getGreeting()}</p>
           <h1 className="text-3xl font-display font-bold text-foreground">
             {firstName}
@@ -53,8 +57,8 @@ export default function Index() {
           <Card className="bg-card border-border rounded-2xl overflow-hidden">
             <CardContent className="p-5">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-full bg-accent/10 flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-accent" />
+                <div className="w-12 h-12 rounded-full gradient-accent flex items-center justify-center glow-accent">
+                  <Calendar className="w-6 h-6 text-accent-foreground" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Today</p>
@@ -66,12 +70,12 @@ export default function Index() {
 
               {isLoading ? (
                 <div className="space-y-3">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-4 w-3/4 bg-secondary" />
+                  <Skeleton className="h-4 w-1/2 bg-secondary" />
                 </div>
               ) : todaysTrips.length > 0 ? (
                 <div className="flex items-center gap-2 text-foreground">
-                  <span className="text-2xl font-display font-bold">{todaysTrips.length}</span>
+                  <span className="text-3xl font-display font-bold text-accent">{todaysTrips.length}</span>
                   <span className="text-muted-foreground">
                     {todaysTrips.length === 1 ? 'trip scheduled' : 'trips scheduled'}
                   </span>
@@ -91,9 +95,9 @@ export default function Index() {
             {isLoading ? (
               <Card className="bg-card border-border rounded-2xl">
                 <CardContent className="p-5 space-y-4">
-                  <Skeleton className="h-6 w-1/3" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-6 w-1/3 bg-secondary" />
+                  <Skeleton className="h-4 w-full bg-secondary" />
+                  <Skeleton className="h-4 w-2/3 bg-secondary" />
                 </CardContent>
               </Card>
             ) : todaysTrips.length > 0 ? (
@@ -105,15 +109,15 @@ export default function Index() {
             ) : nextTrip ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <Clock className="w-4 h-4" />
+                  <Clock className="w-4 h-4 text-accent" />
                   <span>{getDateLabel(nextTrip.scheduled_date)}</span>
                 </div>
                 <TripCard trip={nextTrip} />
               </div>
             ) : (
-              <Card className="bg-card border-border rounded-2xl">
+              <Card className="bg-card border-border border-dashed rounded-2xl">
                 <CardContent className="p-8 text-center">
-                  <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 rounded-full bg-secondary flex items-center justify-center mx-auto mb-4">
                     <MapPin className="w-8 h-8 text-muted-foreground" />
                   </div>
                   <h3 className="font-display font-semibold text-foreground mb-2">
@@ -133,7 +137,7 @@ export default function Index() {
               <CardContent className="p-5">
                 <h3 className="text-sm text-muted-foreground mb-3">This Week</h3>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-display font-bold text-foreground">
+                  <span className="text-3xl font-display font-bold text-accent">
                     {upcomingTrips.length}
                   </span>
                   <span className="text-muted-foreground">upcoming trips</span>

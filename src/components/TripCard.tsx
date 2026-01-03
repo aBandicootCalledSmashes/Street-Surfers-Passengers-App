@@ -14,15 +14,15 @@ interface TripCardProps {
   compact?: boolean;
 }
 
-const statusColors = {
-  scheduled: 'bg-secondary text-secondary-foreground',
-  driver_assigned: 'bg-warning/20 text-warning',
-  in_progress: 'bg-accent/20 text-accent',
-  completed: 'bg-success/20 text-success',
-  cancelled: 'bg-muted text-muted-foreground',
+const statusColors: Record<string, string> = {
+  scheduled: 'bg-secondary text-foreground border-border',
+  driver_assigned: 'bg-warning/20 text-warning border-warning/30',
+  in_progress: 'bg-accent/20 text-accent border-accent/30',
+  completed: 'bg-success/20 text-success border-success/30',
+  cancelled: 'bg-muted text-muted-foreground border-border',
 };
 
-const statusLabels = {
+const statusLabels: Record<string, string> = {
   scheduled: 'Scheduled',
   driver_assigned: 'Driver Assigned',
   in_progress: 'In Progress',
@@ -38,12 +38,17 @@ export function TripCard({ trip, showDriver = true, showActions = true, compact 
   const formattedTime = trip.pickup_time.slice(0, 5);
 
   return (
-    <Card className="overflow-hidden hover:border-accent/50 transition-colors">
+    <Card className="bg-card border-border overflow-hidden hover:border-accent/50 transition-colors">
       <CardContent className={`${compact ? 'p-3' : 'p-4'}`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <Badge variant={trip.trip_type === 'inbound' ? 'default' : 'secondary'} className="font-medium">
+            <Badge 
+              className={`font-medium ${trip.trip_type === 'inbound' 
+                ? 'bg-accent text-accent-foreground' 
+                : 'bg-secondary text-foreground border border-border'
+              }`}
+            >
               {trip.trip_type === 'inbound' ? 'Home → Work' : 'Work → Home'}
             </Badge>
             {trip.trip_passenger.seat_number && (
@@ -52,15 +57,15 @@ export function TripCard({ trip, showDriver = true, showActions = true, compact 
               </span>
             )}
           </div>
-          <Badge className={statusColors[trip.status]}>
+          <Badge className={`${statusColors[trip.status]} border`}>
             {statusLabels[trip.status]}
           </Badge>
         </div>
 
         {/* Time & Date */}
         <div className="flex items-center gap-2 text-sm mb-4">
-          <Clock className="h-4 w-4 text-muted-foreground" />
-          <span className="font-medium">{formattedTime}</span>
+          <Clock className="h-4 w-4 text-accent" />
+          <span className="font-semibold text-foreground">{formattedTime}</span>
           <span className="text-muted-foreground">•</span>
           <span className="text-muted-foreground">{formattedDate}</span>
           {trip.pickup_time_window_minutes && (
@@ -71,39 +76,39 @@ export function TripCard({ trip, showDriver = true, showActions = true, compact 
         </div>
 
         {/* Route */}
-        <div className="space-y-2 mb-4">
-          <div className="flex items-start gap-2">
-            <div className="mt-1">
-              <div className="h-2 w-2 rounded-full bg-success" />
+        <div className="space-y-3 mb-4">
+          <div className="flex items-start gap-3">
+            <div className="mt-1.5">
+              <div className="h-3 w-3 rounded-full bg-success ring-4 ring-success/20" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground">Pickup</p>
-              <p className="text-sm font-medium truncate">{pickupAddress}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Pickup</p>
+              <p className="text-sm font-medium text-foreground truncate">{pickupAddress}</p>
             </div>
           </div>
           
-          <div className="flex items-start gap-2">
-            <div className="mt-1">
-              <div className="h-2 w-2 rounded-full bg-accent" />
+          <div className="flex items-start gap-3">
+            <div className="mt-1.5">
+              <div className="h-3 w-3 rounded-full bg-accent ring-4 ring-accent/20" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-muted-foreground">Drop-off</p>
-              <p className="text-sm font-medium truncate">{dropoffAddress}</p>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Drop-off</p>
+              <p className="text-sm font-medium text-foreground truncate">{dropoffAddress}</p>
             </div>
           </div>
         </div>
 
         {/* Driver Info */}
         {showDriver && trip.driver && (
-          <div className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg mb-4">
-            <Avatar className="h-10 w-10">
+          <div className="flex items-center gap-3 p-3 bg-secondary rounded-xl mb-4 border border-border">
+            <Avatar className="h-10 w-10 border-2 border-accent">
               <AvatarImage src={trip.driver.profile?.avatar_url || undefined} />
-              <AvatarFallback>
+              <AvatarFallback className="bg-muted text-foreground">
                 <User className="h-5 w-5" />
               </AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm truncate">
+              <p className="font-semibold text-sm text-foreground truncate">
                 {trip.driver.profile?.full_name || 'Driver'}
               </p>
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -113,7 +118,7 @@ export function TripCard({ trip, showDriver = true, showActions = true, compact 
                 </span>
               </div>
               {trip.driver.license_plate && (
-                <p className="text-xs font-mono text-muted-foreground">
+                <p className="text-xs font-mono text-accent font-semibold">
                   {trip.driver.license_plate}
                 </p>
               )}
@@ -125,14 +130,14 @@ export function TripCard({ trip, showDriver = true, showActions = true, compact 
         {showActions && (
           <div className="flex gap-2">
             {(trip.status === 'driver_assigned' || trip.status === 'in_progress') && (
-              <Button asChild className="flex-1" variant="default">
+              <Button asChild className="flex-1 gradient-accent text-accent-foreground hover:opacity-90">
                 <Link to={`/map?trip=${trip.id}`}>
                   <MapPin className="h-4 w-4 mr-2" />
                   Live Map
                 </Link>
               </Button>
             )}
-            <Button asChild variant="outline" className="flex-1">
+            <Button asChild variant="outline" className="flex-1 border-border text-foreground hover:bg-secondary hover:text-foreground">
               <Link to={`/trip/${trip.id}`}>
                 Details
                 <ArrowRight className="h-4 w-4 ml-2" />
