@@ -31,7 +31,12 @@ interface AuthContextType {
   passenger: Passenger | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, fullName: string, extraData?: {
+    phone?: string;
+    employee_id?: string;
+    department?: string;
+    home_address?: string;
+  }) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isPassenger: boolean;
 }
@@ -113,7 +118,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
+  const signUp = async (email: string, password: string, fullName: string, extraData?: {
+    phone?: string;
+    employee_id?: string;
+    department?: string;
+    home_address?: string;
+  }) => {
     const redirectUrl = `${window.location.origin}/`;
     
     const { error } = await supabase.auth.signUp({
@@ -123,6 +133,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         emailRedirectTo: redirectUrl,
         data: {
           full_name: fullName,
+          phone: extraData?.phone,
+          employee_id: extraData?.employee_id,
+          department: extraData?.department,
+          home_address: extraData?.home_address,
         },
       },
     });
