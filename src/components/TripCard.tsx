@@ -138,7 +138,7 @@ export function TripCard({ trip, showDriver = true, showActions = true, compact 
               </Button>
             )}
             <Button asChild variant="outline" className="flex-1 border-border text-foreground hover:bg-secondary hover:text-foreground">
-              <Link to={`/trip/${trip.id}`}>
+              <Link to={`/passenger/trips/${trip.id}`}>
                 Details
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Link>

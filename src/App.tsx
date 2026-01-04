@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import MyTrips from "./pages/MyTrips";
+import TripDetails from "./pages/TripDetails";
 import Profile from "./pages/Profile";
 import LiveMap from "./pages/LiveMap";
 import NotFound from "./pages/NotFound";
@@ -31,6 +32,11 @@ const App = () => (
             <Route path="/trips" element={
               <ProtectedRoute>
                 <MyTrips />
+              </ProtectedRoute>
+            } />
+            <Route path="/passenger/trips/:trip_id" element={
+              <ProtectedRoute>
+                <TripDetails />
               </ProtectedRoute>
             } />
             <Route path="/map" element={
