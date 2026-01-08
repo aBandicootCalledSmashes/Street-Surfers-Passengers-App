@@ -13,6 +13,15 @@ interface Passenger {
   emergency_contact_name: string | null;
   emergency_contact_phone: string | null;
   is_active: boolean;
+  payment_status: string;
+  account_status: string;
+  ride_type: string;
+  onboarding_completed: boolean;
+  home_lat: number | null;
+  home_lng: number | null;
+  work_lat: number | null;
+  work_lng: number | null;
+  company: string | null;
 }
 
 interface Profile {

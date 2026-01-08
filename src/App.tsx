@@ -11,6 +11,8 @@ import MyTrips from "./pages/MyTrips";
 import TripDetails from "./pages/TripDetails";
 import Profile from "./pages/Profile";
 import LiveMap from "./pages/LiveMap";
+import Onboarding from "./pages/Onboarding";
+import Schedule from "./pages/Schedule";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,11 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/auth" element={<Auth />} />
+            <Route path="/onboarding" element={
+              <ProtectedRoute requireOnboarding={false}>
+                <Onboarding />
+              </ProtectedRoute>
+            } />
             <Route path="/" element={
               <ProtectedRoute>
                 <Index />
@@ -42,6 +49,11 @@ const App = () => (
             <Route path="/map" element={
               <ProtectedRoute>
                 <LiveMap />
+              </ProtectedRoute>
+            } />
+            <Route path="/schedule" element={
+              <ProtectedRoute>
+                <Schedule />
               </ProtectedRoute>
             } />
             <Route path="/profile" element={
