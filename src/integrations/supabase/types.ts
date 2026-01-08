@@ -14,6 +14,56 @@ export type Database = {
   }
   public: {
     Tables: {
+      availability_requests: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          effective_from: string
+          effective_until: string | null
+          id: string
+          inbound_time: string | null
+          notes: string | null
+          outbound_time: string | null
+          passenger_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          inbound_time?: string | null
+          notes?: string | null
+          outbound_time?: string | null
+          passenger_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          inbound_time?: string | null
+          notes?: string | null
+          outbound_time?: string | null
+          passenger_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "availability_requests_passenger_id_fkey"
+            columns: ["passenger_id"]
+            isOneToOne: false
+            referencedRelation: "passengers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       driver_locations: {
         Row: {
           accuracy: number | null
@@ -112,46 +162,73 @@ export type Database = {
       }
       passengers: {
         Row: {
+          account_status: string
+          company: string | null
           created_at: string
           department: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           employee_id: string | null
           home_address: string | null
+          home_lat: number | null
+          home_lng: number | null
           id: string
           is_active: boolean
+          onboarding_completed: boolean
+          payment_status: string
           pickup_notes: string | null
+          ride_type: string
           updated_at: string
           user_id: string
           work_address: string | null
+          work_lat: number | null
+          work_lng: number | null
         }
         Insert: {
+          account_status?: string
+          company?: string | null
           created_at?: string
           department?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           employee_id?: string | null
           home_address?: string | null
+          home_lat?: number | null
+          home_lng?: number | null
           id?: string
           is_active?: boolean
+          onboarding_completed?: boolean
+          payment_status?: string
           pickup_notes?: string | null
+          ride_type?: string
           updated_at?: string
           user_id: string
           work_address?: string | null
+          work_lat?: number | null
+          work_lng?: number | null
         }
         Update: {
+          account_status?: string
+          company?: string | null
           created_at?: string
           department?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           employee_id?: string | null
           home_address?: string | null
+          home_lat?: number | null
+          home_lng?: number | null
           id?: string
           is_active?: boolean
+          onboarding_completed?: boolean
+          payment_status?: string
           pickup_notes?: string | null
+          ride_type?: string
           updated_at?: string
           user_id?: string
           work_address?: string | null
+          work_lat?: number | null
+          work_lng?: number | null
         }
         Relationships: []
       }
