@@ -5,11 +5,22 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Home, Building2, Search, MapPin, Check, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
 import logo from '@/assets/logo.webp';
 
-interface AddressResult {
-  display_name: string;
-  lat: string;
-  lon: string;
-  place_id: number;
+interface PhotonResult {
+  geometry: {
+    coordinates: [number, number]; // [lon, lat]
+  };
+  properties: {
+    osm_id: number;
+    name?: string;
+    street?: string;
+    housenumber?: string;
+    postcode?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    locality?: string;
+    district?: string;
+  };
 }
 
 interface AddressData {
@@ -25,39 +36,97 @@ interface AddressStepProps {
   onBack?: () => void;
 }
 
+// Format Photon result into a readable address
+function formatPhotonAddress(properties: PhotonResult['properties']): string {
+  const parts: string[] = [];
+  
+  // Build address from available parts
+  if (properties.housenumber && properties.street) {
+    parts.push(`${properties.housenumber} ${properties.street}`);
+  } else if (properties.street) {
+    parts.push(properties.street);
+  } else if (properties.name) {
+    parts.push(properties.name);
+  }
+  
+  if (properties.locality) {
+    parts.push(properties.locality);
+  } else if (properties.district) {
+    parts.push(properties.district);
+  }
+  
+  if (properties.city) {
+    parts.push(properties.city);
+  }
+  
+  if (properties.state) {
+    parts.push(properties.state);
+  }
+  
+  if (properties.postcode) {
+    parts.push(properties.postcode);
+  }
+  
+  if (properties.country) {
+    parts.push(properties.country);
+  }
+  
+  return parts.filter(Boolean).join(', ') || 'Unknown Address';
+}
+
 export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: AddressStepProps) {
   const [searchQuery, setSearchQuery] = useState(initialAddress || '');
-  const [results, setResults] = useState<AddressResult[]>([]);
+  const [results, setResults] = useState<PhotonResult[]>([]);
   const [selectedAddress, setSelectedAddress] = useState<AddressData | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   const searchAddresses = useCallback(async (query: string) => {
     if (query.length < 3) {
       setResults([]);
+      setSearchError(null);
       return;
     }
 
     setIsSearching(true);
     setHasSearched(true);
+    setSearchError(null);
     
     try {
+      // Using Photon API with South Africa bounding box
+      // South Africa bbox: lon_min=16.3, lat_min=-35.0, lon_max=33.0, lat_max=-22.0
       const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&addressdetails=1&countrycodes=za`,
-        {
-          headers: {
-            'User-Agent': 'StreetSurfersPassengerApp/1.0',
-          },
-        }
+        `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&bbox=16.3,-35.0,33.0,-22.0&lang=en`
       );
       
       if (response.ok) {
         const data = await response.json();
-        setResults(data);
+        
+        // Filter to only South African results
+        const saResults = (data.features || []).filter(
+          (feature: PhotonResult) => 
+            feature.properties.country === 'South Africa' || 
+            feature.properties.country === 'ZA'
+        );
+        
+        if (saResults.length === 0 && data.features?.length > 0) {
+          // If bbox returned results but none in SA, show message
+          setResults([]);
+          setSearchError('No matching address found in South Africa. Try refining your search.');
+        } else if (saResults.length === 0) {
+          setResults([]);
+          setSearchError('No matching address found. Try refining your search.');
+        } else {
+          setResults(saResults);
+        }
+      } else {
+        setSearchError('Address search failed. Please try again.');
       }
     } catch (error) {
       console.error('Address search failed:', error);
+      setSearchError('Address search failed. Please check your connection and try again.');
     } finally {
       setIsSearching(false);
     }
@@ -69,19 +138,23 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
       if (searchQuery.length >= 3) {
         searchAddresses(searchQuery);
       }
-    }, 500);
+    }, 400);
 
     return () => clearTimeout(timer);
   }, [searchQuery, searchAddresses]);
 
-  const handleSelect = (result: AddressResult) => {
+  const handleSelect = (result: PhotonResult) => {
+    const formattedAddress = formatPhotonAddress(result.properties);
+    const [lon, lat] = result.geometry.coordinates;
+    
     setSelectedAddress({
-      address: result.display_name,
-      lat: parseFloat(result.lat),
-      lng: parseFloat(result.lon),
+      address: formattedAddress,
+      lat: lat,
+      lng: lon,
     });
-    setSearchQuery(result.display_name);
+    setSearchQuery(formattedAddress);
     setResults([]);
+    setSearchError(null);
   };
 
   const handleConfirm = async () => {
@@ -141,6 +214,7 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
                   setSelectedAddress(null);
+                  setSearchError(null);
                 }}
                 placeholder="Search for your address..."
                 className="h-14 pl-12 bg-input border-border rounded-xl text-foreground placeholder:text-muted-foreground"
@@ -153,26 +227,28 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
             {/* Search Results */}
             {results.length > 0 && (
               <div className="bg-secondary rounded-xl overflow-hidden divide-y divide-border max-h-64 overflow-y-auto">
-                {results.map((result) => (
+                {results.map((result, index) => (
                   <button
-                    key={result.place_id}
+                    key={`${result.properties.osm_id}-${index}`}
                     onClick={() => handleSelect(result)}
                     className="w-full p-4 text-left hover:bg-muted transition-colors flex items-start gap-3"
                   >
                     <MapPin className="w-5 h-5 text-accent mt-0.5 shrink-0" />
                     <span className="text-sm text-foreground line-clamp-2">
-                      {result.display_name}
+                      {formatPhotonAddress(result.properties)}
                     </span>
                   </button>
                 ))}
               </div>
             )}
 
-            {/* No results message */}
+            {/* Error/No results message */}
             {hasSearched && !isSearching && results.length === 0 && searchQuery.length >= 3 && !selectedAddress && (
               <div className="text-center py-6 text-muted-foreground">
                 <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">No addresses found. Try a different search.</p>
+                <p className="text-sm">
+                  {searchError || 'No matching address found. Try refining your search.'}
+                </p>
               </div>
             )}
 
@@ -185,6 +261,9 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
                     <p className="text-sm font-medium text-foreground mb-1">Selected Address</p>
                     <p className="text-sm text-muted-foreground line-clamp-2">
                       {selectedAddress.address}
+                    </p>
+                    <p className="text-xs text-muted-foreground/70 mt-1">
+                      Coordinates: {selectedAddress.lat.toFixed(6)}, {selectedAddress.lng.toFixed(6)}
                     </p>
                   </div>
                 </div>
