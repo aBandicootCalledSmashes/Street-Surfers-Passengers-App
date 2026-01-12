@@ -246,7 +246,7 @@ export default function Auth() {
                       <Input
                         id="signup-phone"
                         type="tel"
-                        placeholder="+1 (555) 123-4567"
+                        placeholder="+27 82 123 4567"
                         value={signupPhone}
                         onChange={(e) => setSignupPhone(e.target.value)}
                         disabled={isLoading}
@@ -285,10 +285,10 @@ export default function Auth() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="signup-home-address" className="text-foreground">Home Address</Label>
+                      <Label htmlFor="signup-home-address" className="text-foreground">Pickup Address (optional)</Label>
                       <Input
                         id="signup-home-address"
-                        placeholder="123 Main St, City, State"
+                        placeholder="123 Becker Street, Yeoville, Johannesburg"
                         value={signupHomeAddress}
                         onChange={(e) => setSignupHomeAddress(e.target.value)}
                         disabled={isLoading}

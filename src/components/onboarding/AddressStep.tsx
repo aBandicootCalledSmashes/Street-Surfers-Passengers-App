@@ -103,12 +103,12 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
       <div className="safe-top px-6 pt-8 pb-4 text-center">
         <img src={logo} alt="Street Surfers" className="h-12 w-auto mx-auto mb-6" />
         <h1 className="text-2xl font-display font-bold text-foreground mb-2">
-          {isHome ? 'Set Your Home Address' : 'Set Your Work Address'}
+          {isHome ? 'Set Your Pickup Address' : 'Set Your Destination'}
         </h1>
         <p className="text-muted-foreground">
           {isHome 
-            ? 'Where should we pick you up from home?' 
-            : 'Where is your workplace?'
+            ? 'Where should we pick you up each morning?' 
+            : 'Where do you need to be dropped off? (e.g. your workplace)'
           }
         </p>
       </div>
@@ -122,9 +122,14 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
               </div>
               <div>
                 <CardTitle className="text-lg font-display">
-                  {isHome ? 'Home Address' : 'Work Address'}
+                  {isHome ? 'Pickup Address' : 'Destination Address'}
                 </CardTitle>
-                <CardDescription>Search and select your address</CardDescription>
+                <CardDescription>
+                  {isHome 
+                    ? 'Search for your home or pickup location' 
+                    : 'Search for your work or drop-off location'
+                  }
+                </CardDescription>
               </div>
             </div>
           </CardHeader>
