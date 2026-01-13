@@ -97,8 +97,9 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
     try {
       // Using Photon API with South Africa bounding box
       // South Africa bbox: lon_min=16.3, lat_min=-35.0, lon_max=33.0, lat_max=-22.0
+      // Include house number in search - Photon supports full address strings
       const response = await fetch(
-        `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&bbox=16.3,-35.0,33.0,-22.0&lang=en`
+        `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=10&bbox=16.3,-35.0,33.0,-22.0&lang=en`
       );
       
       if (response.ok) {
@@ -216,7 +217,7 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
                   setSelectedAddress(null);
                   setSearchError(null);
                 }}
-                placeholder="Search for your address..."
+                placeholder="e.g. 123 Main Street, Sandton"
                 className="h-14 pl-12 bg-input border-border rounded-xl text-foreground placeholder:text-muted-foreground"
               />
               {isSearching && (
