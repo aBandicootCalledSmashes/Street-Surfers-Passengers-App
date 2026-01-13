@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -7,9 +7,17 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, AlertCircle, Shield, MapPin } from 'lucide-react';
 import { z } from 'zod';
+import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo.webp';
+
+interface Company {
+  id: string;
+  company_name: string;
+  site_name: string | null;
+}
 
 const emailSchema = z.string().email('Please enter a valid email');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -22,22 +30,36 @@ export default function Auth() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [companies, setCompanies] = useState<Company[]>([]);
   
   // Login fields
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   
-  // Signup fields - Enhanced with more details
+  // Signup fields
   const [signupEmail, setSignupEmail] = useState('');
   const [signupPassword, setSignupPassword] = useState('');
   const [signupConfirmPassword, setSignupConfirmPassword] = useState('');
   const [signupFullName, setSignupFullName] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
-  const [signupEmployeeId, setSignupEmployeeId] = useState('');
-  const [signupDepartment, setSignupDepartment] = useState('');
-  const [signupHomeAddress, setSignupHomeAddress] = useState('');
+  const [signupShiftType, setSignupShiftType] = useState('day');
+  const [signupCompanyId, setSignupCompanyId] = useState('');
 
   const noPassengerRecord = location.state?.noPassengerRecord;
+
+  // Fetch companies for dropdown
+  useEffect(() => {
+    async function fetchCompanies() {
+      const { data } = await supabase
+        .from('companies')
+        .select('id, company_name, site_name')
+        .eq('is_active', true)
+        .order('company_name', { ascending: true });
+      
+      if (data) setCompanies(data);
+    }
+    fetchCompanies();
+  }, []);
 
   // Redirect if already logged in as passenger
   if (!loading && user && passenger) {
@@ -88,9 +110,8 @@ export default function Auth() {
     
     const { error: signUpError } = await signUp(signupEmail, signupPassword, signupFullName, {
       phone: signupPhone,
-      employee_id: signupEmployeeId,
-      department: signupDepartment,
-      home_address: signupHomeAddress,
+      shift_type: signupShiftType,
+      company_id: signupCompanyId || undefined,
     });
     
     if (signUpError) {
@@ -98,6 +119,12 @@ export default function Auth() {
     }
     
     setIsLoading(false);
+  };
+
+  const formatCompanyOption = (company: Company) => {
+    return company.site_name 
+      ? `${company.company_name} – ${company.site_name}`
+      : company.company_name;
   };
 
   return (
@@ -205,7 +232,7 @@ export default function Auth() {
                 </form>
               </TabsContent>
 
-              {/* Signup Form - Enhanced */}
+              {/* Signup Form */}
               <TabsContent value="signup" className="p-5 pt-4">
                 <form onSubmit={handleSignup} className="space-y-4">
                   {/* Personal Info Section */}
@@ -259,41 +286,41 @@ export default function Auth() {
                   <div className="space-y-4 pt-2">
                     <p className="text-xs text-accent uppercase tracking-wider font-semibold">Work Information</p>
                     
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-employee-id" className="text-foreground">Employee ID</Label>
-                        <Input
-                          id="signup-employee-id"
-                          placeholder="EMP001"
-                          value={signupEmployeeId}
-                          onChange={(e) => setSignupEmployeeId(e.target.value)}
-                          disabled={isLoading}
-                          className="h-12 rounded-xl bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="signup-department" className="text-foreground">Department</Label>
-                        <Input
-                          id="signup-department"
-                          placeholder="Engineering"
-                          value={signupDepartment}
-                          onChange={(e) => setSignupDepartment(e.target.value)}
-                          disabled={isLoading}
-                          className="h-12 rounded-xl bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-shift" className="text-foreground">
+                        Shift Type <span className="text-accent">*</span>
+                      </Label>
+                      <Select value={signupShiftType} onValueChange={setSignupShiftType} disabled={isLoading}>
+                        <SelectTrigger className="h-12 rounded-xl bg-secondary border-border text-foreground">
+                          <SelectValue placeholder="Select your shift type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="day">Day Shift</SelectItem>
+                          <SelectItem value="night">Night Shift</SelectItem>
+                          <SelectItem value="rotational">Rotational</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="signup-home-address" className="text-foreground">Pickup Address (optional)</Label>
-                      <Input
-                        id="signup-home-address"
-                        placeholder="123 Becker Street, Yeoville, Johannesburg"
-                        value={signupHomeAddress}
-                        onChange={(e) => setSignupHomeAddress(e.target.value)}
-                        disabled={isLoading}
-                        className="h-12 rounded-xl bg-secondary border-border text-foreground placeholder:text-muted-foreground focus:border-accent focus:ring-accent"
-                      />
+                      <Label htmlFor="signup-company" className="text-foreground">
+                        Company / Worksite
+                      </Label>
+                      <Select value={signupCompanyId} onValueChange={setSignupCompanyId} disabled={isLoading}>
+                        <SelectTrigger className="h-12 rounded-xl bg-secondary border-border text-foreground">
+                          <SelectValue placeholder="Select your workplace" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {companies.map((company) => (
+                            <SelectItem key={company.id} value={company.id}>
+                              {formatCompanyOption(company)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        You can also set this during onboarding
+                      </p>
                     </div>
                   </div>
 

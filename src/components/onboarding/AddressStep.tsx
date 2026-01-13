@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Home, Building2, Search, MapPin, Check, Loader2, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Home, Building2, Search, MapPin, Check, Loader2, ArrowRight, ArrowLeft, Edit3 } from 'lucide-react';
 import logo from '@/assets/logo.webp';
 
 interface PhotonResult {
@@ -23,10 +23,16 @@ interface PhotonResult {
   };
 }
 
-interface AddressData {
+export interface AddressData {
   address: string;
   lat: number;
   lng: number;
+  house_number?: string;
+  street?: string;
+  suburb?: string;
+  city?: string;
+  province?: string;
+  address_confidence?: 'exact' | 'street-level' | 'manual';
 }
 
 interface AddressStepProps {
@@ -75,13 +81,21 @@ function formatPhotonAddress(properties: PhotonResult['properties']): string {
 }
 
 export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: AddressStepProps) {
+  const [step, setStep] = useState<'search' | 'house-number' | 'manual'>('search');
   const [searchQuery, setSearchQuery] = useState(initialAddress || '');
   const [results, setResults] = useState<PhotonResult[]>([]);
-  const [selectedAddress, setSelectedAddress] = useState<AddressData | null>(null);
+  const [selectedResult, setSelectedResult] = useState<PhotonResult | null>(null);
+  const [houseNumber, setHouseNumber] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+
+  // Manual address fields
+  const [manualStreet, setManualStreet] = useState('');
+  const [manualSuburb, setManualSuburb] = useState('');
+  const [manualCity, setManualCity] = useState('');
+  const [manualProvince, setManualProvince] = useState('');
 
   const searchAddresses = useCallback(async (query: string) => {
     if (query.length < 3) {
@@ -95,9 +109,6 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
     setSearchError(null);
     
     try {
-      // Using Photon API with South Africa bounding box
-      // South Africa bbox: lon_min=16.3, lat_min=-35.0, lon_max=33.0, lat_max=-22.0
-      // Include house number in search - Photon supports full address strings
       const response = await fetch(
         `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=10&bbox=16.3,-35.0,33.0,-22.0&lang=en`
       );
@@ -105,7 +116,6 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
       if (response.ok) {
         const data = await response.json();
         
-        // Filter to only South African results
         const saResults = (data.features || []).filter(
           (feature: PhotonResult) => 
             feature.properties.country === 'South Africa' || 
@@ -113,28 +123,28 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
         );
         
         if (saResults.length === 0 && data.features?.length > 0) {
-          // If bbox returned results but none in SA, show message
           setResults([]);
           setSearchError('No matching address found in South Africa. Try refining your search.');
         } else if (saResults.length === 0) {
           setResults([]);
-          setSearchError('No matching address found. Try refining your search.');
+          setSearchError('No matching address found. Try refining your search or enter manually.');
         } else {
           setResults(saResults);
         }
       } else {
-        setSearchError('Address search failed. Please try again.');
+        setSearchError('Address search failed. Please try again or enter manually.');
       }
     } catch (error) {
       console.error('Address search failed:', error);
-      setSearchError('Address search failed. Please check your connection and try again.');
+      setSearchError('Address search failed. Please check your connection or enter manually.');
     } finally {
       setIsSearching(false);
     }
   }, []);
 
-  // Debounced search
   useEffect(() => {
+    if (step !== 'search') return;
+    
     const timer = setTimeout(() => {
       if (searchQuery.length >= 3) {
         searchAddresses(searchQuery);
@@ -142,28 +152,83 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, searchAddresses]);
+  }, [searchQuery, searchAddresses, step]);
 
   const handleSelect = (result: PhotonResult) => {
-    const formattedAddress = formatPhotonAddress(result.properties);
-    const [lon, lat] = result.geometry.coordinates;
-    
-    setSelectedAddress({
-      address: formattedAddress,
-      lat: lat,
-      lng: lon,
-    });
-    setSearchQuery(formattedAddress);
+    setSelectedResult(result);
+    // Pre-fill house number if available
+    if (result.properties.housenumber) {
+      setHouseNumber(result.properties.housenumber);
+    }
     setResults([]);
     setSearchError(null);
+    setStep('house-number');
   };
 
   const handleConfirm = async () => {
-    if (!selectedAddress) return;
+    if (!selectedResult) return;
+    
+    const [lon, lat] = selectedResult.geometry.coordinates;
+    const props = selectedResult.properties;
+    
+    // Build full address with house number
+    const streetPart = houseNumber 
+      ? `${houseNumber} ${props.street || props.name || ''}`
+      : props.street || props.name || '';
+    
+    const addressParts = [streetPart];
+    if (props.locality || props.district) addressParts.push(props.locality || props.district || '');
+    if (props.city) addressParts.push(props.city);
+    if (props.state) addressParts.push(props.state);
+    
+    const fullAddress = addressParts.filter(Boolean).join(', ');
     
     setIsSubmitting(true);
     try {
-      await onSubmit(selectedAddress);
+      await onSubmit({
+        address: fullAddress,
+        lat: lat,
+        lng: lon,
+        house_number: houseNumber || undefined,
+        street: props.street || props.name || undefined,
+        suburb: props.locality || props.district || undefined,
+        city: props.city || undefined,
+        province: props.state || undefined,
+        address_confidence: houseNumber ? 'exact' : 'street-level',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleManualSubmit = async () => {
+    if (!manualStreet || !manualSuburb || !manualCity) return;
+    
+    const addressParts = [];
+    if (houseNumber && manualStreet) {
+      addressParts.push(`${houseNumber} ${manualStreet}`);
+    } else if (manualStreet) {
+      addressParts.push(manualStreet);
+    }
+    if (manualSuburb) addressParts.push(manualSuburb);
+    if (manualCity) addressParts.push(manualCity);
+    if (manualProvince) addressParts.push(manualProvince);
+    
+    const fullAddress = addressParts.filter(Boolean).join(', ');
+    
+    setIsSubmitting(true);
+    try {
+      await onSubmit({
+        address: fullAddress,
+        lat: 0, // Manual entry - no coordinates
+        lng: 0,
+        house_number: houseNumber || undefined,
+        street: manualStreet,
+        suburb: manualSuburb,
+        city: manualCity,
+        province: manualProvince || undefined,
+        address_confidence: 'manual',
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -172,6 +237,236 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
   const isHome = addressType === 'home';
   const Icon = isHome ? Home : Building2;
 
+  // Manual Entry Form
+  if (step === 'manual') {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="safe-top px-6 pt-8 pb-4 text-center">
+          <img src={logo} alt="Street Surfers" className="h-12 w-auto mx-auto mb-6" />
+          <h1 className="text-2xl font-display font-bold text-foreground mb-2">
+            Enter Address Manually
+          </h1>
+          <p className="text-muted-foreground">
+            Please enter your address details below
+          </p>
+        </div>
+
+        <div className="flex-1 px-5 pb-8">
+          <Card className="bg-card border-border rounded-2xl">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full gradient-accent flex items-center justify-center">
+                  <Edit3 className="w-6 h-6 text-accent-foreground" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-display">Manual Address Entry</CardTitle>
+                  <CardDescription>Enter your complete address details</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  House / Unit Number <span className="text-muted-foreground">(optional)</span>
+                </label>
+                <Input
+                  value={houseNumber}
+                  onChange={(e) => setHouseNumber(e.target.value)}
+                  placeholder="e.g. 12, 12A, Unit 4, Flat 6B"
+                  className="h-12 bg-input border-border rounded-xl text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Street <span className="text-accent">*</span>
+                </label>
+                <Input
+                  value={manualStreet}
+                  onChange={(e) => setManualStreet(e.target.value)}
+                  placeholder="e.g. Main Road"
+                  className="h-12 bg-input border-border rounded-xl text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Suburb <span className="text-accent">*</span>
+                </label>
+                <Input
+                  value={manualSuburb}
+                  onChange={(e) => setManualSuburb(e.target.value)}
+                  placeholder="e.g. Sandton"
+                  className="h-12 bg-input border-border rounded-xl text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  City <span className="text-accent">*</span>
+                </label>
+                <Input
+                  value={manualCity}
+                  onChange={(e) => setManualCity(e.target.value)}
+                  placeholder="e.g. Johannesburg"
+                  className="h-12 bg-input border-border rounded-xl text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  Province <span className="text-muted-foreground">(optional)</span>
+                </label>
+                <Input
+                  value={manualProvince}
+                  onChange={(e) => setManualProvince(e.target.value)}
+                  placeholder="e.g. Gauteng"
+                  className="h-12 bg-input border-border rounded-xl text-foreground placeholder:text-muted-foreground"
+                />
+              </div>
+
+              <div className="bg-secondary/50 border border-border rounded-xl p-3">
+                <p className="text-xs text-muted-foreground">
+                  ⚠️ Manual addresses will need to be verified by dispatch before routing can be optimized.
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setStep('search')}
+                  className="flex-1 h-14 border-border text-foreground rounded-xl"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  Back to Search
+                </Button>
+                <Button
+                  onClick={handleManualSubmit}
+                  disabled={!manualStreet || !manualSuburb || !manualCity || isSubmitting}
+                  className="flex-1 h-14 gradient-accent text-accent-foreground font-display font-semibold rounded-xl glow-accent disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      Save Address
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // House Number Step
+  if (step === 'house-number' && selectedResult) {
+    const props = selectedResult.properties;
+    const streetDisplay = props.street || props.name || 'Selected location';
+    const localityDisplay = [props.locality || props.district, props.city].filter(Boolean).join(', ');
+
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <div className="safe-top px-6 pt-8 pb-4 text-center">
+          <img src={logo} alt="Street Surfers" className="h-12 w-auto mx-auto mb-6" />
+          <h1 className="text-2xl font-display font-bold text-foreground mb-2">
+            Complete Your Address
+          </h1>
+          <p className="text-muted-foreground">
+            We found your street. Please enter your house or unit number to complete the address.
+          </p>
+        </div>
+
+        <div className="flex-1 px-5 pb-8">
+          <Card className="bg-card border-border rounded-2xl">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-full gradient-accent flex items-center justify-center">
+                  <Icon className="w-6 h-6 text-accent-foreground" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-display">{streetDisplay}</CardTitle>
+                  <CardDescription>{localityDisplay}</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="bg-secondary/50 border border-accent/30 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <MapPin className="w-5 h-5 text-accent mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-foreground mb-1">Street Found</p>
+                    <p className="text-sm text-muted-foreground">
+                      {formatPhotonAddress(props)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  House / Unit Number <span className="text-accent">*</span>
+                </label>
+                <Input
+                  value={houseNumber}
+                  onChange={(e) => setHouseNumber(e.target.value)}
+                  placeholder="e.g. 12, 12A, Unit 4, Flat 6B"
+                  className="h-14 bg-input border-border rounded-xl text-foreground placeholder:text-muted-foreground text-lg"
+                  autoFocus
+                />
+                <p className="text-xs text-muted-foreground">
+                  Enter your house number, unit number, or flat number
+                </p>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setStep('search');
+                    setSelectedResult(null);
+                    setHouseNumber('');
+                  }}
+                  className="flex-1 h-14 border-border text-foreground rounded-xl"
+                >
+                  <ArrowLeft className="w-5 h-5 mr-2" />
+                  Change Street
+                </Button>
+                <Button
+                  onClick={handleConfirm}
+                  disabled={!houseNumber.trim() || isSubmitting}
+                  className="flex-1 h-14 gradient-accent text-accent-foreground font-display font-semibold rounded-xl glow-accent disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      Confirm Address
+                      <ArrowRight className="w-5 h-5 ml-2" />
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <Button
+                variant="ghost"
+                onClick={handleConfirm}
+                disabled={isSubmitting}
+                className="w-full text-muted-foreground text-sm"
+              >
+                Skip - I don't have a house number
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // Search Step
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <div className="safe-top px-6 pt-8 pb-4 text-center">
@@ -199,10 +494,7 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
                   {isHome ? 'Pickup Address' : 'Destination Address'}
                 </CardTitle>
                 <CardDescription>
-                  {isHome 
-                    ? 'Search for your home or pickup location' 
-                    : 'Search for your work or drop-off location'
-                  }
+                  Search for your street name and suburb
                 </CardDescription>
               </div>
             </div>
@@ -214,10 +506,10 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
                 value={searchQuery}
                 onChange={(e) => {
                   setSearchQuery(e.target.value);
-                  setSelectedAddress(null);
+                  setSelectedResult(null);
                   setSearchError(null);
                 }}
-                placeholder="e.g. 123 Main Street, Sandton"
+                placeholder="e.g. Main Road, Sandton"
                 className="h-14 pl-12 bg-input border-border rounded-xl text-foreground placeholder:text-muted-foreground"
               />
               {isSearching && (
@@ -244,30 +536,35 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
             )}
 
             {/* Error/No results message */}
-            {hasSearched && !isSearching && results.length === 0 && searchQuery.length >= 3 && !selectedAddress && (
+            {hasSearched && !isSearching && results.length === 0 && searchQuery.length >= 3 && !selectedResult && (
               <div className="text-center py-6 text-muted-foreground">
                 <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">
+                <p className="text-sm mb-4">
                   {searchError || 'No matching address found. Try refining your search.'}
                 </p>
+                <Button
+                  variant="outline"
+                  onClick={() => setStep('manual')}
+                  className="border-accent text-accent hover:bg-accent/10"
+                >
+                  <Edit3 className="w-4 h-4 mr-2" />
+                  Enter Address Manually
+                </Button>
               </div>
             )}
 
-            {/* Selected Address Confirmation */}
-            {selectedAddress && (
-              <div className="bg-secondary/50 border border-accent/30 rounded-xl p-4">
-                <div className="flex items-start gap-3">
-                  <Check className="w-5 h-5 text-accent mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium text-foreground mb-1">Selected Address</p>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {selectedAddress.address}
-                    </p>
-                    <p className="text-xs text-muted-foreground/70 mt-1">
-                      Coordinates: {selectedAddress.lat.toFixed(6)}, {selectedAddress.lng.toFixed(6)}
-                    </p>
-                  </div>
-                </div>
+            {/* Manual entry option always visible */}
+            {!hasSearched && (
+              <div className="text-center py-4">
+                <p className="text-sm text-muted-foreground mb-2">Can't find your address?</p>
+                <Button
+                  variant="ghost"
+                  onClick={() => setStep('manual')}
+                  className="text-accent hover:bg-accent/10"
+                >
+                  <Edit3 className="w-4 h-4 mr-2" />
+                  Enter Manually
+                </Button>
               </div>
             )}
 
@@ -282,20 +579,6 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
                   Back
                 </Button>
               )}
-              <Button
-                onClick={handleConfirm}
-                disabled={!selectedAddress || isSubmitting}
-                className="flex-1 h-14 gradient-accent text-accent-foreground font-display font-semibold rounded-xl glow-accent disabled:opacity-50"
-              >
-                {isSubmitting ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <>
-                    Confirm Address
-                    <ArrowRight className="w-5 h-5 ml-2" />
-                  </>
-                )}
-              </Button>
             </div>
           </CardContent>
         </Card>
