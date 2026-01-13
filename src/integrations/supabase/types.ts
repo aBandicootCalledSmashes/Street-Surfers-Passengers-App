@@ -64,6 +64,54 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          building_note: string | null
+          city: string | null
+          company_name: string
+          created_at: string
+          id: string
+          is_active: boolean
+          latitude: number
+          longitude: number
+          province: string | null
+          site_name: string | null
+          street: string
+          suburb: string | null
+          updated_at: string
+        }
+        Insert: {
+          building_note?: string | null
+          city?: string | null
+          company_name: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latitude: number
+          longitude: number
+          province?: string | null
+          site_name?: string | null
+          street: string
+          suburb?: string | null
+          updated_at?: string
+        }
+        Update: {
+          building_note?: string | null
+          city?: string | null
+          company_name?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latitude?: number
+          longitude?: number
+          province?: string | null
+          site_name?: string | null
+          street?: string
+          suburb?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       driver_locations: {
         Row: {
           accuracy: number | null
@@ -163,21 +211,29 @@ export type Database = {
       passengers: {
         Row: {
           account_status: string
+          address_confidence: string | null
           company: string | null
+          company_id: string | null
           created_at: string
           department: string | null
           emergency_contact_name: string | null
           emergency_contact_phone: string | null
           employee_id: string | null
           home_address: string | null
+          home_city: string | null
+          home_house_number: string | null
           home_lat: number | null
           home_lng: number | null
+          home_province: string | null
+          home_street: string | null
+          home_suburb: string | null
           id: string
           is_active: boolean
           onboarding_completed: boolean
           payment_status: string
           pickup_notes: string | null
           ride_type: string
+          shift_type: string | null
           updated_at: string
           user_id: string
           work_address: string | null
@@ -186,21 +242,29 @@ export type Database = {
         }
         Insert: {
           account_status?: string
+          address_confidence?: string | null
           company?: string | null
+          company_id?: string | null
           created_at?: string
           department?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           employee_id?: string | null
           home_address?: string | null
+          home_city?: string | null
+          home_house_number?: string | null
           home_lat?: number | null
           home_lng?: number | null
+          home_province?: string | null
+          home_street?: string | null
+          home_suburb?: string | null
           id?: string
           is_active?: boolean
           onboarding_completed?: boolean
           payment_status?: string
           pickup_notes?: string | null
           ride_type?: string
+          shift_type?: string | null
           updated_at?: string
           user_id: string
           work_address?: string | null
@@ -209,28 +273,44 @@ export type Database = {
         }
         Update: {
           account_status?: string
+          address_confidence?: string | null
           company?: string | null
+          company_id?: string | null
           created_at?: string
           department?: string | null
           emergency_contact_name?: string | null
           emergency_contact_phone?: string | null
           employee_id?: string | null
           home_address?: string | null
+          home_city?: string | null
+          home_house_number?: string | null
           home_lat?: number | null
           home_lng?: number | null
+          home_province?: string | null
+          home_street?: string | null
+          home_suburb?: string | null
           id?: string
           is_active?: boolean
           onboarding_completed?: boolean
           payment_status?: string
           pickup_notes?: string | null
           ride_type?: string
+          shift_type?: string | null
           updated_at?: string
           user_id?: string
           work_address?: string | null
           work_lat?: number | null
           work_lng?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "passengers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

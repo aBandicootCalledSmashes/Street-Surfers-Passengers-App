@@ -22,6 +22,14 @@ interface Passenger {
   work_lat: number | null;
   work_lng: number | null;
   company: string | null;
+  company_id: string | null;
+  shift_type: string | null;
+  home_house_number: string | null;
+  home_street: string | null;
+  home_suburb: string | null;
+  home_city: string | null;
+  home_province: string | null;
+  address_confidence: string | null;
 }
 
 interface Profile {
@@ -42,9 +50,8 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string, extraData?: {
     phone?: string;
-    employee_id?: string;
-    department?: string;
-    home_address?: string;
+    shift_type?: string;
+    company_id?: string;
   }) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   isPassenger: boolean;
@@ -129,9 +136,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string, fullName: string, extraData?: {
     phone?: string;
-    employee_id?: string;
-    department?: string;
-    home_address?: string;
+    shift_type?: string;
+    company_id?: string;
   }) => {
     const redirectUrl = `${window.location.origin}/`;
     
@@ -143,9 +149,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         data: {
           full_name: fullName,
           phone: extraData?.phone,
-          employee_id: extraData?.employee_id,
-          department: extraData?.department,
-          home_address: extraData?.home_address,
+          shift_type: extraData?.shift_type,
+          company_id: extraData?.company_id,
         },
       },
     });

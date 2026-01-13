@@ -3,14 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { WelcomeStep } from '@/components/onboarding/WelcomeStep';
-import { AddressStep } from '@/components/onboarding/AddressStep';
+import { AddressStep, AddressData } from '@/components/onboarding/AddressStep';
+import { CompanyStep } from '@/components/onboarding/CompanyStep';
 import { ScheduleStep } from '@/components/onboarding/ScheduleStep';
 import { Card, CardContent } from '@/components/ui/card';
 import { Check, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import logo from '@/assets/logo.webp';
 
-type OnboardingStep = 'welcome' | 'home-address' | 'work-address' | 'schedule' | 'complete';
+type OnboardingStep = 'welcome' | 'home-address' | 'company' | 'schedule' | 'complete';
+
+interface Company {
+  id: string;
+  company_name: string;
+  site_name: string | null;
+  street: string;
+  building_note: string | null;
+  suburb: string | null;
+  city: string | null;
+  province: string | null;
+  latitude: number;
+  longitude: number;
+}
 
 export default function Onboarding() {
   const { profile, passenger, user } = useAuth();
@@ -33,7 +47,7 @@ export default function Onboarding() {
 
       if (profileError) throw profileError;
 
-      // Update passenger company
+      // Update passenger company (legacy field)
       const { error: passengerError } = await supabase
         .from('passengers')
         .update({
@@ -54,22 +68,31 @@ export default function Onboarding() {
     }
   };
 
-  const handleHomeAddressSubmit = async (data: { address: string; lat: number; lng: number }) => {
+  const handleHomeAddressSubmit = async (data: AddressData) => {
     if (!user) return;
 
     try {
+      // Build full display address
+      const displayAddress = data.address;
+
       const { error } = await supabase
         .from('passengers')
         .update({
-          home_address: data.address,
-          home_lat: data.lat,
-          home_lng: data.lng,
+          home_address: displayAddress,
+          home_lat: data.lat || null,
+          home_lng: data.lng || null,
+          home_house_number: data.house_number || null,
+          home_street: data.street || null,
+          home_suburb: data.suburb || null,
+          home_city: data.city || null,
+          home_province: data.province || null,
+          address_confidence: data.address_confidence || 'street-level',
         })
         .eq('user_id', user.id);
 
       if (error) throw error;
 
-      setCurrentStep('work-address');
+      setCurrentStep('company');
     } catch (error) {
       console.error('Error updating home address:', error);
       toast({
@@ -80,16 +103,19 @@ export default function Onboarding() {
     }
   };
 
-  const handleWorkAddressSubmit = async (data: { address: string; lat: number; lng: number }) => {
+  const handleCompanySubmit = async (company: Company) => {
     if (!user) return;
 
     try {
+      // Update passenger with company reference and work address from company
       const { error } = await supabase
         .from('passengers')
         .update({
-          work_address: data.address,
-          work_lat: data.lat,
-          work_lng: data.lng,
+          company_id: company.id,
+          company: `${company.company_name}${company.site_name ? ` – ${company.site_name}` : ''}`,
+          work_address: `${company.street}${company.building_note ? ` (${company.building_note})` : ''}, ${company.suburb || ''}, ${company.city || ''}`.replace(/, ,/g, ',').replace(/^,|,$/g, ''),
+          work_lat: company.latitude,
+          work_lng: company.longitude,
         })
         .eq('user_id', user.id);
 
@@ -97,10 +123,10 @@ export default function Onboarding() {
 
       setCurrentStep('schedule');
     } catch (error) {
-      console.error('Error updating work address:', error);
+      console.error('Error updating company:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save work address. Please try again.',
+        description: 'Failed to save company. Please try again.',
         variant: 'destructive',
       });
     }
@@ -140,7 +166,7 @@ export default function Onboarding() {
       // Redirect after showing success
       setTimeout(() => {
         navigate('/');
-        window.location.reload(); // Refresh to get updated passenger data
+        window.location.reload();
       }, 2000);
     } catch (error) {
       console.error('Error submitting schedule:', error);
@@ -205,12 +231,11 @@ export default function Onboarding() {
         />
       );
 
-    case 'work-address':
+    case 'company':
       return (
-        <AddressStep
-          addressType="work"
-          initialAddress={passenger?.work_address}
-          onSubmit={handleWorkAddressSubmit}
+        <CompanyStep
+          initialCompanyId={passenger?.company_id}
+          onSubmit={handleCompanySubmit}
           onBack={() => setCurrentStep('home-address')}
         />
       );
@@ -220,7 +245,7 @@ export default function Onboarding() {
         <ScheduleStep
           rideType={rideType}
           onSubmit={handleScheduleSubmit}
-          onBack={() => setCurrentStep('work-address')}
+          onBack={() => setCurrentStep('company')}
         />
       );
 
