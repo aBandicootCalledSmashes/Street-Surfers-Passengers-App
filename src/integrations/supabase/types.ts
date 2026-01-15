@@ -27,6 +27,7 @@ export type Database = {
           passenger_id: string
           status: string
           updated_at: string
+          week_start: string | null
         }
         Insert: {
           created_at?: string
@@ -40,6 +41,7 @@ export type Database = {
           passenger_id: string
           status?: string
           updated_at?: string
+          week_start?: string | null
         }
         Update: {
           created_at?: string
@@ -53,6 +55,7 @@ export type Database = {
           passenger_id?: string
           status?: string
           updated_at?: string
+          week_start?: string | null
         }
         Relationships: [
           {
@@ -60,6 +63,62 @@ export type Database = {
             columns: ["passenger_id"]
             isOneToOne: false
             referencedRelation: "passengers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branches: {
+        Row: {
+          branch_name: string
+          building_note: string | null
+          city: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          latitude: number
+          longitude: number
+          province: string | null
+          street: string
+          suburb: string | null
+          updated_at: string
+        }
+        Insert: {
+          branch_name: string
+          building_note?: string | null
+          city?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latitude: number
+          longitude: number
+          province?: string | null
+          street: string
+          suburb?: string | null
+          updated_at?: string
+        }
+        Update: {
+          branch_name?: string
+          building_note?: string | null
+          city?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latitude?: number
+          longitude?: number
+          province?: string | null
+          street?: string
+          suburb?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -79,6 +138,7 @@ export type Database = {
           street: string
           suburb: string | null
           updated_at: string
+          verification_status: string
         }
         Insert: {
           building_note?: string | null
@@ -94,6 +154,7 @@ export type Database = {
           street: string
           suburb?: string | null
           updated_at?: string
+          verification_status?: string
         }
         Update: {
           building_note?: string | null
@@ -109,6 +170,7 @@ export type Database = {
           street?: string
           suburb?: string | null
           updated_at?: string
+          verification_status?: string
         }
         Relationships: []
       }
@@ -212,6 +274,7 @@ export type Database = {
         Row: {
           account_status: string
           address_confidence: string | null
+          branch_id: string | null
           company: string | null
           company_id: string | null
           created_at: string
@@ -243,6 +306,7 @@ export type Database = {
         Insert: {
           account_status?: string
           address_confidence?: string | null
+          branch_id?: string | null
           company?: string | null
           company_id?: string | null
           created_at?: string
@@ -274,6 +338,7 @@ export type Database = {
         Update: {
           account_status?: string
           address_confidence?: string | null
+          branch_id?: string | null
           company?: string | null
           company_id?: string | null
           created_at?: string
@@ -303,6 +368,13 @@ export type Database = {
           work_lng?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "passengers_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "passengers_company_id_fkey"
             columns: ["company_id"]
