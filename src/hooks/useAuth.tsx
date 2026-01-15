@@ -23,6 +23,7 @@ interface Passenger {
   work_lng: number | null;
   company: string | null;
   company_id: string | null;
+  branch_id: string | null;
   shift_type: string | null;
   home_house_number: string | null;
   home_street: string | null;

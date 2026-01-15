@@ -16,7 +16,13 @@ type OnboardingStep = 'welcome' | 'home-address' | 'company' | 'schedule' | 'com
 interface Company {
   id: string;
   company_name: string;
-  site_name: string | null;
+  verification_status: string;
+}
+
+interface Branch {
+  id: string;
+  company_id: string;
+  branch_name: string;
   street: string;
   building_note: string | null;
   suburb: string | null;
@@ -103,19 +109,28 @@ export default function Onboarding() {
     }
   };
 
-  const handleCompanySubmit = async (company: Company) => {
+  const handleCompanySubmit = async (company: Company, branch: Branch) => {
     if (!user) return;
 
     try {
-      // Update passenger with company reference and work address from company
+      // Build work address from branch
+      const workAddress = [
+        branch.street,
+        branch.building_note ? `(${branch.building_note})` : null,
+        branch.suburb,
+        branch.city
+      ].filter(Boolean).join(', ');
+
+      // Update passenger with company and branch references
       const { error } = await supabase
         .from('passengers')
         .update({
           company_id: company.id,
-          company: `${company.company_name}${company.site_name ? ` – ${company.site_name}` : ''}`,
-          work_address: `${company.street}${company.building_note ? ` (${company.building_note})` : ''}, ${company.suburb || ''}, ${company.city || ''}`.replace(/, ,/g, ',').replace(/^,|,$/g, ''),
-          work_lat: company.latitude,
-          work_lng: company.longitude,
+          branch_id: branch.id,
+          company: `${company.company_name} – ${branch.branch_name}`,
+          work_address: workAddress,
+          work_lat: branch.latitude,
+          work_lng: branch.longitude,
         })
         .eq('user_id', user.id);
 
@@ -132,11 +147,11 @@ export default function Onboarding() {
     }
   };
 
-  const handleScheduleSubmit = async (schedules: { dayOfWeek: number; inboundTime: string | null; outboundTime: string | null }[]) => {
+  const handleScheduleSubmit = async (schedules: { dayOfWeek: number; inboundTime: string | null; outboundTime: string | null; weekStart: string }[]) => {
     if (!user || !passenger) return;
 
     try {
-      // Insert availability requests
+      // Insert availability requests with week_start
       const { error: scheduleError } = await supabase
         .from('availability_requests')
         .insert(
@@ -145,6 +160,7 @@ export default function Onboarding() {
             day_of_week: schedule.dayOfWeek,
             inbound_time: schedule.inboundTime,
             outbound_time: schedule.outboundTime,
+            week_start: schedule.weekStart,
             status: 'pending',
           }))
         );
@@ -235,6 +251,7 @@ export default function Onboarding() {
       return (
         <CompanyStep
           initialCompanyId={passenger?.company_id}
+          initialBranchId={passenger?.branch_id}
           onSubmit={handleCompanySubmit}
           onBack={() => setCurrentStep('home-address')}
         />

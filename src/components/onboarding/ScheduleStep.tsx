@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Calendar, Clock, ArrowLeft, Loader2, Check, Home, Building2, ArrowRight } from 'lucide-react';
+import { Calendar, ArrowLeft, Loader2, Check, Home, Building2, ArrowRight, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/logo.webp';
+import { format, addDays, startOfWeek, endOfWeek, isAfter, isBefore, parseISO } from 'date-fns';
 
 const DAYS_OF_WEEK = [
   { value: 0, label: 'Sun', fullLabel: 'Sunday' },
@@ -26,16 +27,27 @@ interface ScheduleData {
   dayOfWeek: number;
   inboundTime: string | null;
   outboundTime: string | null;
+  weekStart: string;
 }
 
 interface ScheduleStepProps {
   rideType: 'inbound' | 'outbound' | 'dual';
   onSubmit: (schedules: ScheduleData[]) => Promise<void>;
   onBack: () => void;
+  isNextWeek?: boolean; // When true, scheduling for next week (rolling schedule)
 }
 
-export function ScheduleStep({ rideType, onSubmit, onBack }: ScheduleStepProps) {
+export function ScheduleStep({ rideType, onSubmit, onBack, isNextWeek = false }: ScheduleStepProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Calculate the week start date
+  const today = new Date();
+  const weekStartDate = isNextWeek 
+    ? startOfWeek(addDays(today, 7), { weekStartsOn: 1 }) // Next Monday
+    : startOfWeek(today, { weekStartsOn: 1 }); // This Monday
+  
+  const weekEndDate = endOfWeek(weekStartDate, { weekStartsOn: 1 });
+  
   const [schedules, setSchedules] = useState<Record<number, DaySchedule>>(() => {
     const initial: Record<number, DaySchedule> = {};
     // Default to weekdays enabled
@@ -73,6 +85,7 @@ export function ScheduleStep({ rideType, onSubmit, onBack }: ScheduleStepProps) 
   };
 
   const handleSubmit = async () => {
+    const weekStartStr = format(weekStartDate, 'yyyy-MM-dd');
     const scheduleData: ScheduleData[] = [];
     
     Object.entries(schedules).forEach(([dayStr, schedule]) => {
@@ -81,6 +94,7 @@ export function ScheduleStep({ rideType, onSubmit, onBack }: ScheduleStepProps) 
           dayOfWeek: parseInt(dayStr),
           inboundTime: canInbound ? schedule.inboundTime : null,
           outboundTime: canOutbound ? schedule.outboundTime : null,
+          weekStart: weekStartStr,
         });
       }
     });
@@ -104,14 +118,34 @@ export function ScheduleStep({ rideType, onSubmit, onBack }: ScheduleStepProps) 
       <div className="safe-top px-6 pt-8 pb-4 text-center">
         <img src={logo} alt="Street Surfers" className="h-12 w-auto mx-auto mb-6" />
         <h1 className="text-2xl font-display font-bold text-foreground mb-2">
-          Set Your Schedule
+          {isNextWeek ? 'Schedule Next Week' : 'Set Your Schedule'}
         </h1>
         <p className="text-muted-foreground">
-          Tell us when you need shuttle service
+          {isNextWeek 
+            ? 'Submit your schedule for the upcoming week' 
+            : 'Tell us when you need shuttle service'
+          }
         </p>
       </div>
 
       <div className="flex-1 px-5 pb-8 overflow-y-auto">
+        {/* Week Info Card */}
+        <Card className="bg-card border-border rounded-2xl mb-4">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
+                <CalendarDays className="w-5 h-5 text-accent" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Scheduling for week</p>
+                <p className="font-display font-semibold text-foreground">
+                  {format(weekStartDate, 'MMM d')} - {format(weekEndDate, 'MMM d, yyyy')}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Ride Type Info */}
         <Card className="bg-card border-border rounded-2xl mb-4">
           <CardContent className="p-4">
@@ -211,7 +245,7 @@ export function ScheduleStep({ rideType, onSubmit, onBack }: ScheduleStepProps) 
         </Card>
 
         {/* Summary */}
-        <Card className="bg-secondary/50 border-accent/30 rounded-2xl mb-6">
+        <Card className="bg-secondary/50 border-accent/30 rounded-2xl mb-4">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <Check className="w-5 h-5 text-accent" />
@@ -224,6 +258,17 @@ export function ScheduleStep({ rideType, onSubmit, onBack }: ScheduleStepProps) 
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Rolling Schedule Info */}
+        <Card className="bg-accent/5 border-accent/20 rounded-2xl mb-6">
+          <CardContent className="p-4">
+            <p className="text-sm text-muted-foreground">
+              <strong className="text-foreground">How it works:</strong> Your schedule is submitted weekly. 
+              After your last trip of the week, you can submit your schedule for the next week. 
+              Schedules remain editable until dispatch confirms your assignment.
+            </p>
           </CardContent>
         </Card>
 
