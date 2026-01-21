@@ -517,25 +517,46 @@ export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBac
                   {isSearchingAddress && (
                     <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
                   )}
+                  {addressSearch && !selectedAddress && !isSearchingAddress && (
+                    <button
+                      onClick={() => {
+                        setAddressSearch('');
+                        setAddressResults([]);
+                      }}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
 
-                {/* Address Results */}
+                {/* Address Results Dropdown */}
                 {addressResults.length > 0 && !selectedAddress && (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {addressResults.map((result, index) => (
-                      <button
-                        key={index}
-                        onClick={() => {
-                          setSelectedAddress(result);
-                          setAddressSearch(formatAddress(result));
-                          setAddressResults([]);
-                        }}
-                        className="w-full p-3 rounded-lg text-left bg-secondary hover:bg-muted transition-colors"
-                      >
-                        <p className="text-sm text-foreground">{formatAddress(result)}</p>
-                      </button>
-                    ))}
+                  <div className="bg-card border border-border rounded-xl overflow-hidden shadow-lg">
+                    <div className="max-h-48 overflow-y-auto">
+                      {addressResults.map((result, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setSelectedAddress(result);
+                            setAddressSearch(formatAddress(result));
+                            setAddressResults([]);
+                          }}
+                          className="w-full p-3 text-left hover:bg-muted transition-colors border-b border-border last:border-b-0 flex items-start gap-3"
+                        >
+                          <MapPin className="w-4 h-4 text-accent mt-0.5 shrink-0" />
+                          <p className="text-sm text-foreground">{formatAddress(result)}</p>
+                        </button>
+                      ))}
+                    </div>
                   </div>
+                )}
+
+                {/* No results message */}
+                {addressSearch.length >= 3 && !isSearchingAddress && addressResults.length === 0 && !selectedAddress && (
+                  <p className="text-sm text-muted-foreground px-1">
+                    No addresses found. Try a different search term.
+                  </p>
                 )}
 
                 {/* Selected Address Confirmation */}
@@ -543,7 +564,7 @@ export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBac
                   <div className="bg-accent/10 border border-accent/30 rounded-xl p-3">
                     <div className="flex items-start gap-2">
                       <Check className="w-4 h-4 text-accent mt-0.5 shrink-0" />
-                      <div>
+                      <div className="flex-1">
                         <p className="text-sm font-medium text-foreground">
                           {formatAddress(selectedAddress)}
                         </p>
@@ -551,6 +572,15 @@ export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBac
                           GPS: {selectedAddress.geometry.coordinates[1].toFixed(6)}, {selectedAddress.geometry.coordinates[0].toFixed(6)}
                         </p>
                       </div>
+                      <button
+                        onClick={() => {
+                          setSelectedAddress(null);
+                          setAddressSearch('');
+                        }}
+                        className="text-muted-foreground hover:text-foreground"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
                 )}
