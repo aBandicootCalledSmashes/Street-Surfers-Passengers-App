@@ -145,10 +145,16 @@ export function AddressStep({ addressType, initialAddress, onSubmit, onBack }: A
   useEffect(() => {
     if (step !== 'search') return;
     
+    // Clear results immediately when query is too short
+    if (searchQuery.length < 3) {
+      setResults([]);
+      setSearchError(null);
+      setHasSearched(false);
+      return;
+    }
+    
     const timer = setTimeout(() => {
-      if (searchQuery.length >= 3) {
-        searchAddresses(searchQuery);
-      }
+      searchAddresses(searchQuery);
     }, 400);
 
     return () => clearTimeout(timer);
