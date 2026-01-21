@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -10,14 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, AlertCircle, Shield, MapPin } from 'lucide-react';
 import { z } from 'zod';
-import { supabase } from '@/integrations/supabase/client';
 import logo from '@/assets/logo.webp';
-
-interface Company {
-  id: string;
-  company_name: string;
-  site_name: string | null;
-}
 
 const emailSchema = z.string().email('Please enter a valid email');
 const passwordSchema = z.string().min(6, 'Password must be at least 6 characters');
@@ -30,7 +23,6 @@ export default function Auth() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [companies, setCompanies] = useState<Company[]>([]);
   
   // Login fields
   const [loginEmail, setLoginEmail] = useState('');
@@ -43,23 +35,8 @@ export default function Auth() {
   const [signupFullName, setSignupFullName] = useState('');
   const [signupPhone, setSignupPhone] = useState('');
   const [signupShiftType, setSignupShiftType] = useState('day');
-  const [signupCompanyId, setSignupCompanyId] = useState('');
 
   const noPassengerRecord = location.state?.noPassengerRecord;
-
-  // Fetch companies for dropdown
-  useEffect(() => {
-    async function fetchCompanies() {
-      const { data } = await supabase
-        .from('companies')
-        .select('id, company_name, site_name')
-        .eq('is_active', true)
-        .order('company_name', { ascending: true });
-      
-      if (data) setCompanies(data);
-    }
-    fetchCompanies();
-  }, []);
 
   // Redirect if already logged in as passenger
   if (!loading && user && passenger) {
@@ -111,7 +88,6 @@ export default function Auth() {
     const { error: signUpError } = await signUp(signupEmail, signupPassword, signupFullName, {
       phone: signupPhone,
       shift_type: signupShiftType,
-      company_id: signupCompanyId || undefined,
     });
     
     if (signUpError) {
@@ -119,12 +95,6 @@ export default function Auth() {
     }
     
     setIsLoading(false);
-  };
-
-  const formatCompanyOption = (company: Company) => {
-    return company.site_name 
-      ? `${company.company_name} – ${company.site_name}`
-      : company.company_name;
   };
 
   return (
@@ -302,26 +272,6 @@ export default function Auth() {
                       </Select>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="signup-company" className="text-foreground">
-                        Company / Worksite
-                      </Label>
-                      <Select value={signupCompanyId} onValueChange={setSignupCompanyId} disabled={isLoading}>
-                        <SelectTrigger className="h-12 rounded-xl bg-secondary border-border text-foreground">
-                          <SelectValue placeholder="Select your workplace" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {companies.map((company) => (
-                            <SelectItem key={company.id} value={company.id}>
-                              {formatCompanyOption(company)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">
-                        You can also set this during onboarding
-                      </p>
-                    </div>
                   </div>
 
                   {/* Security Section */}
