@@ -292,10 +292,20 @@ export type Database = {
           home_suburb: string | null
           id: string
           is_active: boolean
+          is_minor: boolean
           onboarding_completed: boolean
+          passenger_type: string
           payment_status: string
           pickup_notes: string | null
           ride_type: string
+          school_address: string | null
+          school_city: string | null
+          school_id: string | null
+          school_lat: number | null
+          school_lng: number | null
+          school_province: string | null
+          school_street: string | null
+          school_suburb: string | null
           shift_type: string | null
           updated_at: string
           user_id: string
@@ -324,10 +334,20 @@ export type Database = {
           home_suburb?: string | null
           id?: string
           is_active?: boolean
+          is_minor?: boolean
           onboarding_completed?: boolean
+          passenger_type?: string
           payment_status?: string
           pickup_notes?: string | null
           ride_type?: string
+          school_address?: string | null
+          school_city?: string | null
+          school_id?: string | null
+          school_lat?: number | null
+          school_lng?: number | null
+          school_province?: string | null
+          school_street?: string | null
+          school_suburb?: string | null
           shift_type?: string | null
           updated_at?: string
           user_id: string
@@ -356,10 +376,20 @@ export type Database = {
           home_suburb?: string | null
           id?: string
           is_active?: boolean
+          is_minor?: boolean
           onboarding_completed?: boolean
+          passenger_type?: string
           payment_status?: string
           pickup_notes?: string | null
           ride_type?: string
+          school_address?: string | null
+          school_city?: string | null
+          school_id?: string | null
+          school_lat?: number | null
+          school_lng?: number | null
+          school_province?: string | null
+          school_street?: string | null
+          school_suburb?: string | null
           shift_type?: string | null
           updated_at?: string
           user_id?: string
@@ -380,6 +410,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "passengers_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
             referencedColumns: ["id"]
           },
         ]
@@ -414,6 +451,98 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      scholar_profiles: {
+        Row: {
+          created_at: string
+          grade_year: string | null
+          guardian_email: string | null
+          guardian_full_name: string
+          guardian_phone: string
+          id: string
+          passenger_id: string
+          school_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grade_year?: string | null
+          guardian_email?: string | null
+          guardian_full_name: string
+          guardian_phone: string
+          id?: string
+          passenger_id: string
+          school_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grade_year?: string | null
+          guardian_email?: string | null
+          guardian_full_name?: string
+          guardian_phone?: string
+          id?: string
+          passenger_id?: string
+          school_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scholar_profiles_passenger_id_fkey"
+            columns: ["passenger_id"]
+            isOneToOne: true
+            referencedRelation: "passengers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schools: {
+        Row: {
+          building_note: string | null
+          city: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          latitude: number
+          longitude: number
+          province: string | null
+          school_name: string
+          street: string
+          suburb: string | null
+          updated_at: string
+          verification_status: string
+        }
+        Insert: {
+          building_note?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latitude: number
+          longitude: number
+          province?: string | null
+          school_name: string
+          street: string
+          suburb?: string | null
+          updated_at?: string
+          verification_status?: string
+        }
+        Update: {
+          building_note?: string | null
+          city?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          latitude?: number
+          longitude?: number
+          province?: string | null
+          school_name?: string
+          street?: string
+          suburb?: string | null
+          updated_at?: string
+          verification_status?: string
         }
         Relationships: []
       }
