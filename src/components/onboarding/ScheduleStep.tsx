@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Calendar, ArrowLeft, Loader2, Check, Home, Building2, ArrowRight, CalendarDays } from 'lucide-react';
+import { Calendar, ArrowLeft, Loader2, Check, Home, Building2, ArrowRight, CalendarDays, GraduationCap, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import logo from '@/assets/logo.webp';
 import { format, addDays, startOfWeek, endOfWeek, isAfter, isBefore, parseISO } from 'date-fns';
@@ -16,6 +16,9 @@ const DAYS_OF_WEEK = [
   { value: 5, label: 'Fri', fullLabel: 'Friday' },
   { value: 6, label: 'Sat', fullLabel: 'Saturday' },
 ];
+
+// Scholar-only weekdays (Mon-Fri only)
+const SCHOLAR_ALLOWED_DAYS = [1, 2, 3, 4, 5];
 
 interface DaySchedule {
   enabled: boolean;
@@ -34,10 +37,11 @@ interface ScheduleStepProps {
   rideType: 'inbound' | 'outbound' | 'dual';
   onSubmit: (schedules: ScheduleData[]) => Promise<void>;
   onBack: () => void;
-  isNextWeek?: boolean; // When true, scheduling for next week (rolling schedule)
+  isNextWeek?: boolean;
+  isScholar?: boolean;
 }
 
-export function ScheduleStep({ rideType, onSubmit, onBack, isNextWeek = false }: ScheduleStepProps) {
+export function ScheduleStep({ rideType, onSubmit, onBack, isNextWeek = false, isScholar = false }: ScheduleStepProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Calculate the week start date
@@ -50,12 +54,12 @@ export function ScheduleStep({ rideType, onSubmit, onBack, isNextWeek = false }:
   
   const [schedules, setSchedules] = useState<Record<number, DaySchedule>>(() => {
     const initial: Record<number, DaySchedule> = {};
-    // Default to weekdays enabled
+    // Default to weekdays enabled (Mon-Fri)
     for (let i = 0; i < 7; i++) {
       initial[i] = {
         enabled: i >= 1 && i <= 5, // Mon-Fri enabled
-        inboundTime: '07:30',
-        outboundTime: '17:00',
+        inboundTime: isScholar ? '06:45' : '07:30',
+        outboundTime: isScholar ? '14:30' : '17:00',
       };
     }
     return initial;
@@ -65,6 +69,11 @@ export function ScheduleStep({ rideType, onSubmit, onBack, isNextWeek = false }:
   const canOutbound = rideType === 'outbound' || rideType === 'dual';
 
   const toggleDay = (dayValue: number) => {
+    // Scholars can only toggle weekdays
+    if (isScholar && !SCHOLAR_ALLOWED_DAYS.includes(dayValue)) {
+      return;
+    }
+    
     setSchedules((prev) => ({
       ...prev,
       [dayValue]: {
@@ -163,28 +172,54 @@ export function ScheduleStep({ rideType, onSubmit, onBack, isNextWeek = false }:
           </CardContent>
         </Card>
 
+        {/* Scholar Weekday-Only Notice */}
+        {isScholar && (
+          <Card className="bg-warning/10 border-warning/30 rounded-2xl mb-4">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-warning shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-foreground">Scholar Transport Rules</p>
+                  <p className="text-xs text-muted-foreground">
+                    Scholar transport is only available on weekdays (Monday to Friday).
+                    Weekend scheduling is disabled.
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Day Selection */}
         <Card className="bg-card border-border rounded-2xl mb-4">
           <CardHeader className="pb-3">
             <CardTitle className="text-base font-display">Select Days</CardTitle>
-            <CardDescription>Tap to toggle each day</CardDescription>
+            <CardDescription>
+              {isScholar ? 'Weekdays only (Mon-Fri)' : 'Tap to toggle each day'}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="flex gap-2 justify-between">
-              {DAYS_OF_WEEK.map((day) => (
-                <button
-                  key={day.value}
-                  onClick={() => toggleDay(day.value)}
-                  className={cn(
-                    'w-10 h-10 rounded-xl text-sm font-medium transition-all',
-                    schedules[day.value].enabled
-                      ? 'gradient-accent text-accent-foreground'
-                      : 'bg-secondary text-muted-foreground hover:bg-muted'
-                  )}
-                >
-                  {day.label}
-                </button>
-              ))}
+              {DAYS_OF_WEEK.map((day) => {
+                const isDisabled = isScholar && !SCHOLAR_ALLOWED_DAYS.includes(day.value);
+                return (
+                  <button
+                    key={day.value}
+                    onClick={() => toggleDay(day.value)}
+                    disabled={isDisabled}
+                    className={cn(
+                      'w-10 h-10 rounded-xl text-sm font-medium transition-all',
+                      isDisabled
+                        ? 'bg-muted text-muted-foreground/50 cursor-not-allowed'
+                        : schedules[day.value].enabled
+                          ? 'gradient-accent text-accent-foreground'
+                          : 'bg-secondary text-muted-foreground hover:bg-muted'
+                    )}
+                  >
+                    {day.label}
+                  </button>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -202,7 +237,9 @@ export function ScheduleStep({ rideType, onSubmit, onBack, isNextWeek = false }:
                   <Home className="w-5 h-5 text-accent" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">Inbound (Home → Work)</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {isScholar ? 'Inbound (Home → School)' : 'Inbound (Home → Work)'}
+                  </p>
                   <p className="text-xs text-muted-foreground">Pickup time from home</p>
                 </div>
                 <Input
@@ -222,11 +259,15 @@ export function ScheduleStep({ rideType, onSubmit, onBack, isNextWeek = false }:
             {canOutbound && (
               <div className="flex items-center gap-4 p-4 bg-secondary rounded-xl">
                 <div className="w-10 h-10 rounded-full bg-accent/20 flex items-center justify-center shrink-0">
-                  <Building2 className="w-5 h-5 text-accent" />
+                  {isScholar ? <GraduationCap className="w-5 h-5 text-accent" /> : <Building2 className="w-5 h-5 text-accent" />}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-foreground">Outbound (Work → Home)</p>
-                  <p className="text-xs text-muted-foreground">Pickup time from work</p>
+                  <p className="text-sm font-medium text-foreground">
+                    {isScholar ? 'Outbound (School → Home)' : 'Outbound (Work → Home)'}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {isScholar ? 'Pickup time from school' : 'Pickup time from work'}
+                  </p>
                 </div>
                 <Input
                   type="time"

@@ -31,6 +31,27 @@ interface Passenger {
   home_city: string | null;
   home_province: string | null;
   address_confidence: string | null;
+  // Scholar fields
+  passenger_type: string;
+  is_minor: boolean;
+  school_id: string | null;
+  school_address: string | null;
+  school_lat: number | null;
+  school_lng: number | null;
+  school_street: string | null;
+  school_suburb: string | null;
+  school_city: string | null;
+  school_province: string | null;
+}
+
+interface ScholarProfile {
+  id: string;
+  passenger_id: string;
+  school_name: string | null;
+  grade_year: string | null;
+  guardian_full_name: string;
+  guardian_phone: string;
+  guardian_email: string | null;
 }
 
 interface Profile {
