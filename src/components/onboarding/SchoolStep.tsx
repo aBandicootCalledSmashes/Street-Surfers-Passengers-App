@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { GraduationCap, MapPin, ArrowRight, ArrowLeft, Loader2, Check, Plus, Search, X, ChevronRight } from 'lucide-react';
+import { GraduationCap, ArrowRight, ArrowLeft, Loader2, Plus, Search, X, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { AddressAutocomplete, AddressSelection } from '@/components/AddressAutocomplete';
 import logo from '@/assets/logo.webp';
 
 interface School {
@@ -27,37 +28,18 @@ interface SchoolStepProps {
 
 type Step = 'search' | 'create-school';
 
-interface PhotonResult {
-  properties: {
-    name?: string;
-    street?: string;
-    housenumber?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    postcode?: string;
-    suburb?: string;
-  };
-  geometry: {
-    coordinates: [number, number];
-  };
-}
-
 export function SchoolStep({ initialSchoolId, onSubmit, onBack }: SchoolStepProps) {
   const [step, setStep] = useState<Step>('search');
   const [schools, setSchools] = useState<School[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSchool, setSelectedSchool] = useState<School | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [addressError, setAddressError] = useState<string | null>(null);
 
   // New school creation state
   const [newSchoolName, setNewSchoolName] = useState('');
-  const [addressSearch, setAddressSearch] = useState('');
-  const [addressResults, setAddressResults] = useState<PhotonResult[]>([]);
-  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
-  const [selectedAddress, setSelectedAddress] = useState<PhotonResult | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<AddressSelection | null>(null);
 
   useEffect(() => {
     async function fetchSchools() {
@@ -79,7 +61,6 @@ export function SchoolStep({ initialSchoolId, onSubmit, onBack }: SchoolStepProp
         if (initialSchoolId && data) {
           const initial = data.find(s => s.id === initialSchoolId);
           if (initial) {
-            setSelectedSchool(initial);
             setSearchQuery(initial.school_name);
           }
         }
@@ -104,37 +85,7 @@ export function SchoolStep({ initialSchoolId, onSubmit, onBack }: SchoolStepProp
   const showAddNew = searchQuery.trim().length >= 2 && 
     !filteredSchools.some(s => s.school_name.toLowerCase() === searchQuery.toLowerCase());
 
-  // Address search with debounce
-  useEffect(() => {
-    if (addressSearch.length < 3) {
-      setAddressResults([]);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setIsSearchingAddress(true);
-      try {
-        const response = await fetch(
-          `https://photon.komoot.io/api/?q=${encodeURIComponent(addressSearch)}&limit=8&lang=en&lat=-26.2041&lon=28.0473&location_bias_scale=0.5`
-        );
-        const data = await response.json();
-        // Filter to South Africa
-        const zaResults = (data.features || []).filter(
-          (f: PhotonResult) => f.properties.country === 'South Africa'
-        );
-        setAddressResults(zaResults);
-      } catch (err) {
-        console.error('Address search failed:', err);
-      } finally {
-        setIsSearchingAddress(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [addressSearch]);
-
   const handleSelectSchool = async (school: School) => {
-    setSelectedSchool(school);
     setIsSubmitting(true);
     try {
       await onSubmit(school);
@@ -148,35 +99,37 @@ export function SchoolStep({ initialSchoolId, onSubmit, onBack }: SchoolStepProp
     setStep('create-school');
   };
 
-  const formatAddress = (result: PhotonResult) => {
-    const p = result.properties;
-    const parts = [];
-    if (p.street) parts.push(p.street);
-    if (p.suburb) parts.push(p.suburb);
-    if (p.city) parts.push(p.city);
-    if (p.state) parts.push(p.state);
-    return parts.join(', ') || p.name || 'Unknown location';
+  const handleAddressSelect = (selection: AddressSelection) => {
+    setSelectedAddress(selection);
+    setAddressError(null);
+  };
+
+  const handleAddressClear = () => {
+    setSelectedAddress(null);
   };
 
   const handleCreateSchool = async () => {
-    if (!newSchoolName.trim() || !selectedAddress) return;
+    if (!newSchoolName.trim()) return;
+    
+    if (!selectedAddress) {
+      setAddressError('Please select a valid address from the list.');
+      return;
+    }
 
     setIsSubmitting(true);
+    setAddressError(null);
     try {
-      const props = selectedAddress.properties;
-      const [lng, lat] = selectedAddress.geometry.coordinates;
-
       // Create school
       const { data: schoolData, error: schoolError } = await supabase
         .from('schools')
         .insert({
           school_name: newSchoolName.trim(),
-          street: props.street || props.name || '',
-          suburb: props.suburb || null,
-          city: props.city || null,
-          province: props.state || null,
-          latitude: lat,
-          longitude: lng,
+          street: selectedAddress.street || selectedAddress.formatted_address,
+          suburb: selectedAddress.suburb || null,
+          city: selectedAddress.city || null,
+          province: selectedAddress.province || null,
+          latitude: selectedAddress.latitude,
+          longitude: selectedAddress.longitude,
           verification_status: 'pending_verification',
           is_active: true,
         })
@@ -196,12 +149,10 @@ export function SchoolStep({ initialSchoolId, onSubmit, onBack }: SchoolStepProp
 
   const resetToSearch = () => {
     setStep('search');
-    setSelectedSchool(null);
     setSearchQuery('');
     setNewSchoolName('');
-    setAddressSearch('');
     setSelectedAddress(null);
-    setAddressResults([]);
+    setAddressError(null);
   };
 
   // Search step
@@ -307,6 +258,9 @@ export function SchoolStep({ initialSchoolId, onSubmit, onBack }: SchoolStepProp
                           <p className="text-xs text-muted-foreground truncate">
                             {[school.suburb, school.city].filter(Boolean).join(', ')}
                           </p>
+                          {school.verification_status === 'pending_verification' && (
+                            <p className="text-xs text-yellow-500">Pending verification</p>
+                          )}
                         </div>
                         <ChevronRight className="w-5 h-5 text-muted-foreground" />
                       </div>
@@ -318,6 +272,15 @@ export function SchoolStep({ initialSchoolId, onSubmit, onBack }: SchoolStepProp
                       <GraduationCap className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
                       <p className="text-muted-foreground">
                         Start typing to search or add a school
+                      </p>
+                    </div>
+                  )}
+
+                  {filteredSchools.length === 0 && !showAddNew && searchQuery.length >= 2 && (
+                    <div className="text-center py-8">
+                      <GraduationCap className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                      <p className="text-muted-foreground">
+                        No schools found — Add new
                       </p>
                     </div>
                   )}
@@ -372,98 +335,27 @@ export function SchoolStep({ initialSchoolId, onSubmit, onBack }: SchoolStepProp
               />
             </div>
 
-            {/* School Address */}
-            <div className="space-y-2">
-              <Label className="text-foreground font-medium">School Address *</Label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <Input
-                  placeholder="Search for school address..."
-                  value={addressSearch}
-                  onChange={(e) => {
-                    setAddressSearch(e.target.value);
-                    setSelectedAddress(null);
-                  }}
-                  className="pl-10 h-12 bg-secondary border-border rounded-xl text-foreground"
-                />
-                {isSearchingAddress && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
-                )}
-                {addressSearch && !selectedAddress && !isSearchingAddress && (
-                  <button
-                    onClick={() => {
-                      setAddressSearch('');
-                      setAddressResults([]);
-                    }}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+            {/* School Address - Using AddressAutocomplete */}
+            <AddressAutocomplete
+              address_context="school"
+              onSelect={handleAddressSelect}
+              onClear={handleAddressClear}
+              required
+              error={addressError || undefined}
+            />
 
-              {/* Address Results Dropdown */}
-              {addressResults.length > 0 && !selectedAddress && (
-                <div className="bg-card border border-border rounded-xl overflow-hidden shadow-lg">
-                  <div className="max-h-48 overflow-y-auto">
-                    {addressResults.map((result, index) => (
-                      <button
-                        key={index}
-                        onClick={() => {
-                          setSelectedAddress(result);
-                          setAddressSearch(formatAddress(result));
-                          setAddressResults([]);
-                        }}
-                        className="w-full p-3 text-left hover:bg-muted transition-colors border-b border-border last:border-b-0 flex items-start gap-3"
-                      >
-                        <MapPin className="w-4 h-4 text-accent mt-0.5 shrink-0" />
-                        <p className="text-sm text-foreground">{formatAddress(result)}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* No results message */}
-              {addressSearch.length >= 3 && !isSearchingAddress && addressResults.length === 0 && !selectedAddress && (
-                <p className="text-sm text-muted-foreground px-1">
-                  No addresses found. Try a different search term.
-                </p>
-              )}
-
-              {/* Selected Address Confirmation */}
-              {selectedAddress && (
-                <div className="bg-accent/10 border border-accent/30 rounded-xl p-3">
-                  <div className="flex items-start gap-2">
-                    <Check className="w-4 h-4 text-accent mt-0.5 shrink-0" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">
-                        {formatAddress(selectedAddress)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        GPS: {selectedAddress.geometry.coordinates[1].toFixed(6)}, {selectedAddress.geometry.coordinates[0].toFixed(6)}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setSelectedAddress(null);
-                        setAddressSearch('');
-                      }}
-                      className="text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              )}
+            {/* Pending verification note */}
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
+              <p className="text-sm text-yellow-500">
+                <strong>Note:</strong> New schools are marked as "pending verification" and will be reviewed by an administrator.
+              </p>
             </div>
 
             {error && (
               <p className="text-sm text-destructive">{error}</p>
             )}
 
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
                 onClick={resetToSearch}
@@ -475,7 +367,7 @@ export function SchoolStep({ initialSchoolId, onSubmit, onBack }: SchoolStepProp
               <Button
                 onClick={handleCreateSchool}
                 disabled={!canProceed || isSubmitting}
-                className="flex-1 h-14 gradient-accent text-accent-foreground rounded-xl font-semibold"
+                className="flex-1 h-14 gradient-accent text-accent-foreground font-display font-semibold rounded-xl glow-accent disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <Loader2 className="w-5 h-5 animate-spin" />
