@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Building2, MapPin, ArrowRight, ArrowLeft, Loader2, Check, Plus, Search, X, ChevronRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { AddressAutocomplete, AddressSelection } from '@/components/AddressAutocomplete';
 import logo from '@/assets/logo.webp';
 
 interface Company {
@@ -35,22 +36,6 @@ interface CompanyStepProps {
 
 type Step = 'search' | 'create-company' | 'select-branch' | 'create-branch';
 
-interface PhotonResult {
-  properties: {
-    name?: string;
-    street?: string;
-    housenumber?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    postcode?: string;
-    suburb?: string;
-  };
-  geometry: {
-    coordinates: [number, number];
-  };
-}
-
 export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBack }: CompanyStepProps) {
   const [step, setStep] = useState<Step>('search');
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -61,14 +46,12 @@ export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBac
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [addressError, setAddressError] = useState<string | null>(null);
 
   // New company creation state
   const [newCompanyName, setNewCompanyName] = useState('');
   const [newBranchName, setNewBranchName] = useState('');
-  const [addressSearch, setAddressSearch] = useState('');
-  const [addressResults, setAddressResults] = useState<PhotonResult[]>([]);
-  const [isSearchingAddress, setIsSearchingAddress] = useState(false);
-  const [selectedAddress, setSelectedAddress] = useState<PhotonResult | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<AddressSelection | null>(null);
 
   useEffect(() => {
     async function fetchCompanies() {
@@ -145,35 +128,6 @@ export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBac
   const showAddNew = searchQuery.trim().length >= 2 && 
     !filteredCompanies.some(c => c.company_name.toLowerCase() === searchQuery.toLowerCase());
 
-  // Address search with debounce
-  useEffect(() => {
-    if (addressSearch.length < 3) {
-      setAddressResults([]);
-      return;
-    }
-
-    const timer = setTimeout(async () => {
-      setIsSearchingAddress(true);
-      try {
-        const response = await fetch(
-          `https://photon.komoot.io/api/?q=${encodeURIComponent(addressSearch)}&limit=8&lang=en&lat=-26.2041&lon=28.0473&location_bias_scale=0.5`
-        );
-        const data = await response.json();
-        // Filter to South Africa
-        const zaResults = (data.features || []).filter(
-          (f: PhotonResult) => f.properties.country === 'South Africa'
-        );
-        setAddressResults(zaResults);
-      } catch (err) {
-        console.error('Address search failed:', err);
-      } finally {
-        setIsSearchingAddress(false);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [addressSearch]);
-
   const handleSelectCompany = async (company: Company) => {
     setSelectedCompany(company);
     setSearchQuery(company.company_name);
@@ -197,35 +151,37 @@ export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBac
     setStep('create-company');
   };
 
-  const formatAddress = (result: PhotonResult) => {
-    const p = result.properties;
-    const parts = [];
-    if (p.street) parts.push(p.street);
-    if (p.suburb) parts.push(p.suburb);
-    if (p.city) parts.push(p.city);
-    if (p.state) parts.push(p.state);
-    return parts.join(', ') || p.name || 'Unknown location';
+  const handleAddressSelect = (selection: AddressSelection) => {
+    setSelectedAddress(selection);
+    setAddressError(null);
+  };
+
+  const handleAddressClear = () => {
+    setSelectedAddress(null);
   };
 
   const handleCreateCompanyAndBranch = async () => {
-    if (!newCompanyName.trim() || !newBranchName.trim() || !selectedAddress) return;
+    if (!newCompanyName.trim() || !newBranchName.trim()) return;
+    
+    if (!selectedAddress) {
+      setAddressError('Please select a valid address from the list.');
+      return;
+    }
 
     setIsSubmitting(true);
+    setAddressError(null);
     try {
-      const props = selectedAddress.properties;
-      const [lng, lat] = selectedAddress.geometry.coordinates;
-
       // Create company
       const { data: companyData, error: companyError } = await supabase
         .from('companies')
         .insert({
           company_name: newCompanyName.trim(),
-          street: props.street || props.name || '',
-          suburb: props.suburb || null,
-          city: props.city || null,
-          province: props.state || null,
-          latitude: lat,
-          longitude: lng,
+          street: selectedAddress.street || selectedAddress.formatted_address,
+          suburb: selectedAddress.suburb || null,
+          city: selectedAddress.city || null,
+          province: selectedAddress.province || null,
+          latitude: selectedAddress.latitude,
+          longitude: selectedAddress.longitude,
           verification_status: 'pending_verification',
           is_active: true,
         })
@@ -240,12 +196,12 @@ export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBac
         .insert({
           company_id: companyData.id,
           branch_name: newBranchName.trim(),
-          street: props.street || props.name || '',
-          suburb: props.suburb || null,
-          city: props.city || null,
-          province: props.state || null,
-          latitude: lat,
-          longitude: lng,
+          street: selectedAddress.street || selectedAddress.formatted_address,
+          suburb: selectedAddress.suburb || null,
+          city: selectedAddress.city || null,
+          province: selectedAddress.province || null,
+          latitude: selectedAddress.latitude,
+          longitude: selectedAddress.longitude,
           is_active: true,
         })
         .select()
@@ -263,25 +219,28 @@ export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBac
   };
 
   const handleCreateBranch = async () => {
-    if (!selectedCompany || !newBranchName.trim() || !selectedAddress) return;
+    if (!selectedCompany || !newBranchName.trim()) return;
+    
+    if (!selectedAddress) {
+      setAddressError('Please select a valid address from the list.');
+      return;
+    }
 
     setIsSubmitting(true);
+    setAddressError(null);
     try {
-      const props = selectedAddress.properties;
-      const [lng, lat] = selectedAddress.geometry.coordinates;
-
       // Create branch
       const { data: branchData, error: branchError } = await supabase
         .from('branches')
         .insert({
           company_id: selectedCompany.id,
           branch_name: newBranchName.trim(),
-          street: props.street || props.name || '',
-          suburb: props.suburb || null,
-          city: props.city || null,
-          province: props.state || null,
-          latitude: lat,
-          longitude: lng,
+          street: selectedAddress.street || selectedAddress.formatted_address,
+          suburb: selectedAddress.suburb || null,
+          city: selectedAddress.city || null,
+          province: selectedAddress.province || null,
+          latitude: selectedAddress.latitude,
+          longitude: selectedAddress.longitude,
           is_active: true,
         })
         .select()
@@ -316,9 +275,8 @@ export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBac
     setSearchQuery('');
     setNewCompanyName('');
     setNewBranchName('');
-    setAddressSearch('');
     setSelectedAddress(null);
-    setAddressResults([]);
+    setAddressError(null);
   };
 
   // Search step
@@ -437,6 +395,15 @@ export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBac
                       </p>
                     </div>
                   )}
+
+                  {filteredCompanies.length === 0 && !showAddNew && searchQuery.length >= 2 && (
+                    <div className="text-center py-8">
+                      <Building2 className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                      <p className="text-muted-foreground">
+                        No companies found — Add new
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -500,91 +467,14 @@ export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBac
                 />
               </div>
 
-              {/* Work Address */}
-              <div className="space-y-2">
-                <Label className="text-foreground font-medium">Work Address *</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    placeholder="Search for work address..."
-                    value={addressSearch}
-                    onChange={(e) => {
-                      setAddressSearch(e.target.value);
-                      setSelectedAddress(null);
-                    }}
-                    className="pl-10 h-12 bg-secondary border-border rounded-xl text-foreground"
-                  />
-                  {isSearchingAddress && (
-                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
-                  )}
-                  {addressSearch && !selectedAddress && !isSearchingAddress && (
-                    <button
-                      onClick={() => {
-                        setAddressSearch('');
-                        setAddressResults([]);
-                      }}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Address Results Dropdown */}
-                {addressResults.length > 0 && !selectedAddress && (
-                  <div className="bg-card border border-border rounded-xl overflow-hidden shadow-lg">
-                    <div className="max-h-48 overflow-y-auto">
-                      {addressResults.map((result, index) => (
-                        <button
-                          key={index}
-                          onClick={() => {
-                            setSelectedAddress(result);
-                            setAddressSearch(formatAddress(result));
-                            setAddressResults([]);
-                          }}
-                          className="w-full p-3 text-left hover:bg-muted transition-colors border-b border-border last:border-b-0 flex items-start gap-3"
-                        >
-                          <MapPin className="w-4 h-4 text-accent mt-0.5 shrink-0" />
-                          <p className="text-sm text-foreground">{formatAddress(result)}</p>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* No results message */}
-                {addressSearch.length >= 3 && !isSearchingAddress && addressResults.length === 0 && !selectedAddress && (
-                  <p className="text-sm text-muted-foreground px-1">
-                    No addresses found. Try a different search term.
-                  </p>
-                )}
-
-                {/* Selected Address Confirmation */}
-                {selectedAddress && (
-                  <div className="bg-accent/10 border border-accent/30 rounded-xl p-3">
-                    <div className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-accent mt-0.5 shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-foreground">
-                          {formatAddress(selectedAddress)}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          GPS: {selectedAddress.geometry.coordinates[1].toFixed(6)}, {selectedAddress.geometry.coordinates[0].toFixed(6)}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setSelectedAddress(null);
-                          setAddressSearch('');
-                        }}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Work Address - Using AddressAutocomplete */}
+              <AddressAutocomplete
+                address_context="company"
+                onSelect={handleAddressSelect}
+                onClear={handleAddressClear}
+                required
+                error={addressError || undefined}
+              />
 
               {/* Pending verification note */}
               <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4">
@@ -791,61 +681,15 @@ export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBac
                 />
               </div>
 
-              {/* Work Address */}
-              <div className="space-y-2">
-                <Label className="text-foreground font-medium">Branch Address *</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                  <Input
-                    placeholder="Search for branch address..."
-                    value={addressSearch}
-                    onChange={(e) => {
-                      setAddressSearch(e.target.value);
-                      setSelectedAddress(null);
-                    }}
-                    className="pl-10 h-12 bg-secondary border-border rounded-xl text-foreground"
-                  />
-                  {isSearchingAddress && (
-                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
-                  )}
-                </div>
-
-                {/* Address Results */}
-                {addressResults.length > 0 && !selectedAddress && (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {addressResults.map((result, index) => (
-                      <button
-                        key={index}
-                        onClick={() => {
-                          setSelectedAddress(result);
-                          setAddressSearch(formatAddress(result));
-                          setAddressResults([]);
-                        }}
-                        className="w-full p-3 rounded-lg text-left bg-secondary hover:bg-muted transition-colors"
-                      >
-                        <p className="text-sm text-foreground">{formatAddress(result)}</p>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Selected Address Confirmation */}
-                {selectedAddress && (
-                  <div className="bg-accent/10 border border-accent/30 rounded-xl p-3">
-                    <div className="flex items-start gap-2">
-                      <Check className="w-4 h-4 text-accent mt-0.5 shrink-0" />
-                      <div>
-                        <p className="text-sm font-medium text-foreground">
-                          {formatAddress(selectedAddress)}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          GPS: {selectedAddress.geometry.coordinates[1].toFixed(6)}, {selectedAddress.geometry.coordinates[0].toFixed(6)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* Branch Address - Using AddressAutocomplete */}
+              <AddressAutocomplete
+                address_context="company"
+                onSelect={handleAddressSelect}
+                onClear={handleAddressClear}
+                label="Branch Address"
+                required
+                error={addressError || undefined}
+              />
 
               {error && (
                 <p className="text-sm text-destructive">{error}</p>
@@ -861,8 +705,8 @@ export function CompanyStep({ initialCompanyId, initialBranchId, onSubmit, onBac
                       resetToSearch();
                     }
                     setNewBranchName('');
-                    setAddressSearch('');
                     setSelectedAddress(null);
+                    setAddressError(null);
                   }}
                   className="flex-1 h-14 border-border text-foreground rounded-xl"
                 >
