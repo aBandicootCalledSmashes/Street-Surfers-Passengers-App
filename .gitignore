@@ -3,6 +3,9 @@
 .env.local
 .env.*.local
 
+# Local project knowledge (kept locally only)
+project-knowledge.md
+
 # Logs
 logs
 *.log
