@@ -71,7 +71,7 @@ export default function Onboarding() {
     try {
       // Update passenger type and is_minor flag
       const { error } = await supabase
-        .from('passengers')
+        .from('passenger_profiles')
         .update({
           passenger_type: type,
           is_minor: type === 'scholar',
@@ -109,7 +109,7 @@ export default function Onboarding() {
       // Update passenger company (legacy field) - only for staff
       if (passengerType === 'staff') {
         const { error: passengerError } = await supabase
-          .from('passengers')
+          .from('passenger_profiles')
           .update({
             company: data.company,
           })
@@ -134,7 +134,7 @@ export default function Onboarding() {
 
     try {
       const { error } = await supabase
-        .from('passengers')
+        .from('passenger_profiles')
         .update({
           home_address: data.address,
           home_lat: data.lat || null,
@@ -196,7 +196,7 @@ export default function Onboarding() {
 
       // Update passenger with school info
       const { error: passengerError } = await supabase
-        .from('passengers')
+        .from('passenger_profiles')
         .update({
           school_id: school.id,
           school_address: schoolAddress,
@@ -250,7 +250,7 @@ export default function Onboarding() {
 
       // Update passenger with company and branch references
       const { error } = await supabase
-        .from('passengers')
+        .from('passenger_profiles')
         .update({
           company_id: company.id,
           branch_id: branch.id,
@@ -296,7 +296,7 @@ export default function Onboarding() {
 
       // Mark onboarding as complete
       const { error: onboardingError } = await supabase
-        .from('passengers')
+        .from('passenger_profiles')
         .update({
           onboarding_completed: true,
         })

@@ -24,7 +24,7 @@ export interface Trip {
 export interface TripPassenger {
   id: string;
   trip_id: string;
-  passenger_id: string;
+  commuter_id: string;
   pickup_address: string | null;
   dropoff_address: string | null;
   pickup_lat: number | null;
@@ -80,7 +80,7 @@ export function useTrips() {
       const { data: tripPassengers, error: tpError } = await supabase
         .from('trip_passengers')
         .select('*')
-        .eq('passenger_id', passenger.id);
+        .eq('commuter_id', passenger.id);
 
       if (tpError) throw tpError;
 

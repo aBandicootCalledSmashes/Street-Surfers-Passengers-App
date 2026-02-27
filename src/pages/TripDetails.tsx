@@ -320,7 +320,7 @@ export default function TripDetails() {
             </CardHeader>
             <CardContent className="space-y-3">
               {trip.all_passengers.map((tp, index) => {
-                const isYou = tp.passenger_id === passenger?.id;
+                const isYou = tp.commuter_id === passenger?.id;
                 return (
                   <div
                     key={tp.id}

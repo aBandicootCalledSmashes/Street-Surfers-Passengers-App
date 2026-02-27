@@ -42,7 +42,7 @@ export function useTripDetails(tripId: string | undefined) {
         .from('trip_passengers')
         .select('*')
         .eq('trip_id', tripId)
-        .eq('passenger_id', passenger.id)
+        .eq('commuter_id', passenger.id)
         .single();
 
       if (tpError || !tripPassenger) {
@@ -72,14 +72,14 @@ export function useTripDetails(tripId: string | undefined) {
         .order('seat_number', { ascending: true });
 
       // Fetch passenger profiles
-      const passengerIds = allTripPassengers?.map(tp => tp.passenger_id) || [];
+      const commuterIds = allTripPassengers?.map(tp => tp.commuter_id).filter(Boolean) || [];
       let passengersWithProfiles: PassengerWithProfile[] = [];
 
-      if (passengerIds.length > 0) {
+      if (commuterIds.length > 0) {
         const { data: passengersData } = await supabase
-          .from('passengers')
+          .from('passenger_profiles')
           .select('id, user_id')
-          .in('id', passengerIds);
+          .in('id', commuterIds);
 
         if (passengersData) {
           const userIds = passengersData.map(p => p.user_id);
@@ -104,7 +104,7 @@ export function useTripDetails(tripId: string | undefined) {
 
           passengersWithProfiles = allTripPassengers?.map(tp => ({
             ...tp,
-            passenger: passengersMap[tp.passenger_id],
+            passenger: passengersMap[tp.commuter_id],
           })) || [];
         }
       }
@@ -133,7 +133,7 @@ export function useTripDetails(tripId: string | undefined) {
       }
 
       const currentTripPassenger = passengersWithProfiles.find(
-        tp => tp.passenger_id === passenger.id
+        tp => tp.commuter_id === passenger.id
       ) || { ...tripPassenger };
 
       setTrip({

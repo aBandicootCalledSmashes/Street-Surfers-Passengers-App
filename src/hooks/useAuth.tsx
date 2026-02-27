@@ -101,7 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Fetch passenger record
       const { data: passengerData } = await supabase
-        .from('passengers')
+        .from('passenger_profiles')
         .select('*')
         .eq('user_id', userId)
         .maybeSingle();
