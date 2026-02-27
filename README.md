@@ -1,73 +1,116 @@
-# Welcome to your Lovable project
+# Street Surfers — Passengers App
 
-## Project info
+> Your daily commute, handled.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+The Street Surfers Passengers App is the commuter-facing side of the Street Surfers transport platform, built for staff and scholar passengers in Johannesburg, Gauteng. Passengers track their allocated transport, monitor their driver in real time, and stay informed at every step of the journey.
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## Platform Overview
 
-**Use Lovable**
+Street Surfers is a multi-app transport management platform:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+| App | Audience |
+|---|---|
+| **Passengers App** ← *this repo* | Staff & scholar commuters |
+| Driver's App | Allocated drivers |
+| Dispatcher Dashboard *(coming soon)* | Admin & dispatch team |
 
-Changes made via Lovable will be committed automatically to this repo.
+All three apps share a single Supabase backend.
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## What Passengers Can Do
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- View allocated trips, assigned driver, and scheduled times
+- Track the driver's live location on a map when en route
+- See real-time ETA and pick-up status updates
+- Get notified when the driver is on the way, has arrived, or has confirmed pickup
+- Submit weekly schedule / availability for dispatch approval
+- Manage profile, home address, and emergency contact details
 
-Follow these steps:
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Framework | React 18 + Vite + TypeScript |
+| UI | Shadcn UI + Tailwind CSS |
+| Routing | React Router v6 |
+| Data fetching | TanStack Query v5 |
+| Forms | React Hook Form + Zod |
+| Backend | Supabase (Auth + Postgres + Realtime) |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- npm
+
+### Setup
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# Clone the repo
+git clone https://github.com/aBandicootCalledSmashes/Street-Surfers-Passengers-App.git
+cd Street-Surfers-Passengers-App
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Install dependencies
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
+# Create your environment file
+# Fill in VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in a .env file
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start the dev server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The app runs at `http://localhost:8080`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+---
 
-**Use GitHub Codespaces**
+## App Flow
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```
+Passenger registers
+       ↓
+Completes onboarding (home address, company, shift)
+       ↓
+Submits weekly availability → Dispatch approves
+       ↓
+Dispatch creates trip + assigns driver
+       ↓
+Passenger sees trip on dashboard
+       ↓
+Day of trip: driver goes online → passenger gets notified
+       ↓
+Passenger tracks live driver location + ETA
+       ↓
+Driver confirms pickup → status updates for passenger + dispatch
+       ↓
+Trip completed → dropoff confirmed
+```
 
-## What technologies are used for this project?
+---
 
-This project is built with:
+## Project Structure
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```
+src/
+  integrations/supabase/   ← Supabase client & generated types
+  hooks/                   ← useAuth, useTrips, useTripDetails, useDriverLocation
+  pages/                   ← Auth, Onboarding, Index (dashboard), MyTrips,
+                              TripDetails, LiveMap, Schedule, Profile
+  components/              ← Shared UI components
+supabase/
+  migrations/              ← SQL migration history
+```
 
-## How can I deploy this project?
+---
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+## License
 
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Private — Street Surfers. All rights reserved.

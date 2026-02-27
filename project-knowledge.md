@@ -139,6 +139,15 @@ supabase/
 - Users must re-register (user data not imported — `handle_new_user` trigger auto-creates their records on signup)
 - New users go through `Onboarding.tsx` to enter their details
 
+### Branding (done 2026-02-27)
+- `public/favicon.png` — Street Surfers logo (PNG, used as modern favicon + apple-touch-icon)
+- `public/favicon.ico` — ICO generated from PNG via scripts/png-to-ico.cjs (PNG-in-ICO, Vista+ compatible)
+- `public/og-image.jpg` — Social image for OG/Twitter cards
+- `index.html` — Rewritten: title "Street Surfers", branded description, all Lovable refs removed
+- `README.md` — Fully rewritten, brand-aligned, Lovable boilerplate removed
+- `project-knowledge.md` — Added to `.gitignore` (local only, never committed)
+- GitHub repo description updated
+
 ---
 
 ## Important Notes for Development
